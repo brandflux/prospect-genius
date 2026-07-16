@@ -143,5 +143,11 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+}
+
+/* Apply dark palette by default — the app is dark-first. */
+html {
+  color-scheme: dark;
 }
