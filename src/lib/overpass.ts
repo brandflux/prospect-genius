@@ -109,6 +109,30 @@ function buildAddress(tags: Record<string, string>): string | null {
   return parts.length ? parts.join(" - ") : null;
 }
 
+const OVERPASS_SERVERS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://lz4.overpass-api.de/api/interpreter",
+  "https://z.overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.nchc.org.tw/api/interpreter"
+];
+
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
+
 export async function overpassSearchAround(opts: {
   lat: number;
   lon: number;
@@ -123,35 +147,51 @@ export async function overpassSearchAround(opts: {
     )
     .join("\n");
   const query = `[out:json][timeout:30];(\n${parts}\n);out center tags ${opts.limit ?? 200};`;
-  const res = await fetch("https://overpass-api.de/api/interpreter", {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" },
-    body: query,
-  });
-  if (!res.ok) throw new Error(`Overpass: ${res.status}`);
-  const json = (await res.json()) as OverpassResponse;
-  const pois: OsmPoi[] = [];
-  for (const el of json.elements) {
-    const tags = el.tags ?? {};
-    if (!tags.name) continue;
-    const lat = el.lat ?? el.center?.lat ?? null;
-    const lon = el.lon ?? el.center?.lon ?? null;
-    pois.push({
-      osm_id: `${el.type[0]}${el.id}`,
-      name: tags.name,
-      category: pickCategory(tags),
-      phone: tags.phone || tags["contact:phone"] || tags["contact:mobile"] || null,
-      email: tags.email || tags["contact:email"] || null,
-      website: tags.website || tags["contact:website"] || tags.url || null,
-      address: buildAddress(tags),
-      city: tags["addr:city"] || null,
-      state: tags["addr:state"] || null,
-      country: tags["addr:country"] || null,
-      latitude: lat,
-      longitude: lon,
-    });
+
+  let lastError: any = null;
+  for (const server of OVERPASS_SERVERS) {
+    try {
+      const res = await fetchWithTimeout(server, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: query,
+      }, 15000); // 15 seconds timeout per server
+
+      if (res.ok) {
+        const json = (await res.json()) as OverpassResponse;
+        const pois: OsmPoi[] = [];
+        for (const el of json.elements) {
+          const tags = el.tags ?? {};
+          if (!tags.name) continue;
+          const lat = el.lat ?? el.center?.lat ?? null;
+          const lon = el.lon ?? el.center?.lon ?? null;
+          pois.push({
+            osm_id: `${el.type[0]}${el.id}`,
+            name: tags.name,
+            category: pickCategory(tags),
+            phone: tags.phone || tags["contact:phone"] || tags["contact:mobile"] || null,
+            email: tags.email || tags["contact:email"] || null,
+            website: tags.website || tags["contact:website"] || tags.url || null,
+            address: buildAddress(tags),
+            city: tags["addr:city"] || null,
+            state: tags["addr:state"] || null,
+            country: tags["addr:country"] || null,
+            latitude: lat,
+            longitude: lon,
+          });
+        }
+        return pois;
+      } else {
+        console.warn(`Overpass server ${server} failed with status: ${res.status}`);
+        lastError = new Error(`Overpass status ${res.status} from ${server}`);
+      }
+    } catch (err) {
+      console.warn(`Overpass server ${server} threw error:`, err);
+      lastError = err;
+    }
   }
-  return pois;
+
+  throw lastError || new Error("All Overpass servers failed or timed out.");
 }
 
 export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
