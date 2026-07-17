@@ -65,9 +65,9 @@ function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>1. Conecte o Supabase preenchendo <code className="text-primary">.env.local</code>.</p>
-          <p>2. Rode a migration em <code className="text-primary">supabase/migrations/0001_init.sql</code> no seu projeto.</p>
-          <p>3. Peça a Etapa 2 para eu implementar a integração com Google Places.</p>
+          <p>1. Backend do Lovable Cloud já conectado — auth, banco e functions prontos.</p>
+          <p>2. Próximo: criar as tabelas (searches, companies, messages, etc.) via migration.</p>
+          <p>3. Depois: integração com Google Places e geração de mensagens com IA.</p>
         </CardContent>
       </Card>
     </AppShell>
