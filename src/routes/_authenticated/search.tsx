@@ -312,6 +312,38 @@ function SearchPage() {
     setLoading(true);
     setResults([]);
     try {
+      let searchLat = lat;
+      let searchLon = lon;
+
+      if (searchMode === "cep") {
+        // Resolve coordinates dynamically based on inputs
+        const queryParts = [rua, bairro, cidade, estado, "Brasil"].filter(Boolean).join(", ");
+        if (queryParts && queryParts !== "Brasil") {
+          const geo = await geocodeAddress(queryParts);
+          if (geo) {
+            searchLat = parseFloat(geo.lat);
+            searchLon = parseFloat(geo.lon);
+            setLat(searchLat);
+            setLon(searchLon);
+          } else {
+            // Fallback to City & State only
+            const fallbackGeo = await geocodeAddress(`${cidade}, ${estado}, Brasil`);
+            if (fallbackGeo) {
+              searchLat = parseFloat(fallbackGeo.lat);
+              searchLon = parseFloat(fallbackGeo.lon);
+              setLat(searchLat);
+              setLon(searchLon);
+            } else {
+              setLoading(false);
+              return toast.error("Não foi possível localizar este endereço no mapa. Verifique a grafia da Cidade e UF.");
+            }
+          }
+        } else {
+          setLoading(false);
+          return toast.error("Informe um CEP ou o nome da Cidade e UF.");
+        }
+      }
+
       const selectedPreset = CATEGORY_PRESETS.find(
         (c) => c.label.toLowerCase() === categoryInput.toLowerCase()
       );
@@ -328,8 +360,8 @@ function SearchPage() {
 
       const radiusMeters = radiusKm * 1000;
       const pois = await overpassSearchAround({
-        lat,
-        lon,
+        lat: searchLat,
+        lon: searchLon,
         radiusMeters,
         filters,
         limit: 200,
@@ -724,17 +756,37 @@ function SearchPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label>Cidade</Label>
-                        <Input value={cidade} disabled className="bg-slate-900/40" />
+                        <Label htmlFor="cidade">Cidade</Label>
+                        <Input 
+                          id="cidade" 
+                          value={cidade} 
+                          onChange={(e) => setCidade(e.target.value)} 
+                          placeholder="Ex: Osasco" 
+                        />
                       </div>
                       <div>
-                        <Label>UF</Label>
-                        <Input value={estado} disabled className="bg-slate-900/40" />
+                        <Label htmlFor="uf">UF</Label>
+                        <Input 
+                          id="uf" 
+                          value={estado} 
+                          onChange={(e) => setEstado(e.target.value)} 
+                          placeholder="Ex: SP" 
+                          maxLength={2}
+                          className="uppercase"
+                        />
                       </div>
                     </div>
                     <div>
-                      <Label>Endereço</Label>
-                      <Input value={rua ? `${rua} - ${bairro}` : ""} disabled className="bg-slate-900/40" />
+                      <Label htmlFor="endereco">Endereço</Label>
+                      <Input 
+                        id="endereco" 
+                        value={rua || bairro ? `${rua || ""} ${bairro ? `- ${bairro}` : ""}`.trim() : ""} 
+                        onChange={(e) => {
+                          setRua(e.target.value);
+                          setBairro(""); // Clear neighborhood if editing manually
+                        }} 
+                        placeholder="Rua e número (opcional)" 
+                      />
                     </div>
                   </div>
                 )}
