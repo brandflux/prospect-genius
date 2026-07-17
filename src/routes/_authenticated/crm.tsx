@@ -311,11 +311,15 @@ function CompanyDrawer({
 }) {
   const [notes, setNotes] = useState("");
   const [notesDirty, setNotesDirty] = useState(false);
+  const [lastContact, setLastContact] = useState("");
+  const [nextContact, setNextContact] = useState("");
 
   // Reset notes when a different company opens
   useMemo(() => {
     setNotes(company?.notes ?? "");
     setNotesDirty(false);
+    setLastContact(company?.last_contact_at ? company.last_contact_at.split("T")[0] : "");
+    setNextContact(company?.next_contact_at ? company.next_contact_at.split("T")[0] : "");
   }, [company?.id]);
 
   const wa = whatsappLink(company?.phone);
@@ -405,6 +409,43 @@ function CompanyDrawer({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Último Contato</Label>
+                <input
+                  type="date"
+                  value={lastContact}
+                  onChange={(e) => setLastContact(e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-slate-200"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Próximo Contato</Label>
+                <input
+                  type="date"
+                  value={nextContact}
+                  onChange={(e) => setNextContact(e.target.value)}
+                  className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-xs shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring text-slate-200"
+                />
+              </div>
+            </div>
+            
+            <div className="mt-2 flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  onUpdate({
+                    last_contact_at: lastContact ? new Date(lastContact).toISOString() : null,
+                    next_contact_at: nextContact ? new Date(nextContact).toISOString() : null,
+                  });
+                  toast.success("Datas de contato atualizadas.");
+                }}
+              >
+                Salvar Datas
+              </Button>
             </div>
 
             <div className="mt-4 space-y-2">

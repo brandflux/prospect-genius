@@ -9,22 +9,21 @@ export type CategoryPreset = {
 
 export const CATEGORY_PRESETS: CategoryPreset[] = [
   { value: "restaurant", label: "Restaurante", filters: [`["amenity"="restaurant"]`] },
-  { value: "cafe", label: "Café", filters: [`["amenity"="cafe"]`] },
-  { value: "bakery", label: "Padaria", filters: [`["shop"="bakery"]`] },
-  { value: "bar", label: "Bar / Pub", filters: [`["amenity"="bar"]`, `["amenity"="pub"]`] },
-  { value: "fast_food", label: "Fast food", filters: [`["amenity"="fast_food"]`] },
-  { value: "gym", label: "Academia", filters: [`["leisure"="fitness_centre"]`, `["sport"="fitness"]`] },
+  { value: "marmoraria", label: "Marmoraria", filters: [`["shop"="stonemason"]`, `["craft"="stone_cutter"]`, `["shop"="stone"]`] },
   { value: "dentist", label: "Dentista", filters: [`["amenity"="dentist"]`] },
-  { value: "doctor", label: "Médico / Clínica", filters: [`["amenity"="doctors"]`, `["amenity"="clinic"]`] },
+  { value: "advogado", label: "Advogado", filters: [`["office"="lawyer"]`, `["office"="lawyers"]`, `["office"="estate_agent"]`] },
+  { value: "gym", label: "Academia", filters: [`["leisure"="fitness_centre"]`, `["sport"="fitness"]`] },
+  { value: "auto_escola", label: "Auto Escola", filters: [`["amenity"="driving_school"]`, `["driving_school"="yes"]`] },
   { value: "pharmacy", label: "Farmácia", filters: [`["amenity"="pharmacy"]`] },
-  { value: "vet", label: "Veterinário", filters: [`["amenity"="veterinary"]`] },
-  { value: "hairdresser", label: "Barbearia / Cabeleireiro", filters: [`["shop"="hairdresser"]`] },
-  { value: "beauty", label: "Salão de beleza", filters: [`["shop"="beauty"]`] },
-  { value: "hotel", label: "Hotel / Pousada", filters: [`["tourism"="hotel"]`, `["tourism"="guest_house"]`] },
-  { value: "supermarket", label: "Supermercado", filters: [`["shop"="supermarket"]`] },
-  { value: "clothes", label: "Loja de roupas", filters: [`["shop"="clothes"]`] },
-  { value: "car_repair", label: "Oficina mecânica", filters: [`["shop"="car_repair"]`] },
-  { value: "florist", label: "Floricultura", filters: [`["shop"="florist"]`] },
+  { value: "bakery", label: "Padaria", filters: [`["shop"="bakery"]`] },
+  { value: "clinic", label: "Clínica", filters: [`["amenity"="clinic"]`, `["amenity"="doctors"]`] },
+  { value: "supermarket", label: "Mercado", filters: [`["shop"="supermarket"]`, `["shop"="convenience"]`] },
+  { value: "hotel", label: "Hotel", filters: [`["tourism"="hotel"]`, `["tourism"="guest_house"]`, `["tourism"="hostel"]`] },
+  { value: "car_repair", label: "Oficina", filters: [`["shop"="car_repair"]`] },
+  { value: "barber", label: "Barbearia", filters: [`["shop"="hairdresser"]`] },
+  { value: "beauty", label: "Salão de Beleza", filters: [`["shop"="beauty"]`, `["shop"="beauty_salon"]`] },
+  { value: "pet", label: "Pet Shop", filters: [`["shop"="pet"]`, `["shop"="pet_grooming"]`] },
+  { value: "builder", label: "Construtora", filters: [`["office"="builder"]`, `["office"="construction"]`, `["craft"="builder"]`] },
 ];
 
 export type OsmPoi = {
@@ -40,13 +39,14 @@ export type OsmPoi = {
   country: string | null;
   latitude: number | null;
   longitude: number | null;
+  distanceKm?: number;
 };
 
 type NominatimResult = {
-  boundingbox: [string, string, string, string]; // [south, north, west, east]
   lat: string;
   lon: string;
   display_name: string;
+  boundingbox: [string, string, string, string];
 };
 
 export async function geocodeCity(params: {
@@ -59,9 +59,21 @@ export async function geocodeCity(params: {
   url.searchParams.set("q", q);
   url.searchParams.set("format", "json");
   url.searchParams.set("limit", "1");
-  url.searchParams.set("addressdetails", "0");
   const res = await fetch(url.toString(), {
-    headers: { Accept: "application/json" },
+    headers: { "User-Agent": "LeadFinder-Prospecting-App/1.0" },
+  });
+  if (!res.ok) throw new Error(`Nominatim: ${res.status}`);
+  const data = (await res.json()) as NominatimResult[];
+  return data[0] ?? null;
+}
+
+export async function geocodeAddress(addressStr: string): Promise<NominatimResult | null> {
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("q", addressStr);
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "1");
+  const res = await fetch(url.toString(), {
+    headers: { "User-Agent": "LeadFinder-Prospecting-App/1.0" },
   });
   if (!res.ok) throw new Error(`Nominatim: ${res.status}`);
   const data = (await res.json()) as NominatimResult[];
@@ -97,19 +109,20 @@ function buildAddress(tags: Record<string, string>): string | null {
   return parts.length ? parts.join(" - ") : null;
 }
 
-export async function overpassSearch(opts: {
-  bbox: [number, number, number, number]; // [south, west, north, east]
+export async function overpassSearchAround(opts: {
+  lat: number;
+  lon: number;
+  radiusMeters: number;
   filters: string[];
   limit?: number;
 }): Promise<OsmPoi[]> {
-  const [s, w, n, e] = opts.bbox;
   const parts = opts.filters
     .map(
       (f) =>
-        `node${f}(${s},${w},${n},${e});way${f}(${s},${w},${n},${e});relation${f}(${s},${w},${n},${e});`,
+        `node${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});way${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});relation${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});`,
     )
     .join("\n");
-  const query = `[out:json][timeout:25];(\n${parts}\n);out center tags ${opts.limit ?? 200};`;
+  const query = `[out:json][timeout:30];(\n${parts}\n);out center tags ${opts.limit ?? 200};`;
   const res = await fetch("https://overpass-api.de/api/interpreter", {
     method: "POST",
     headers: { "Content-Type": "text/plain" },
@@ -141,7 +154,16 @@ export async function overpassSearch(opts: {
   return pois;
 }
 
-export function bboxFromNominatim(r: NominatimResult): [number, number, number, number] {
-  const [s, n, w, e] = r.boundingbox.map(Number) as [number, number, number, number];
-  return [s, w, n, e];
+export function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the Earth in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // Distance in km
 }

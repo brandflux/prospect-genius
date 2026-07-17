@@ -111,6 +111,8 @@ export type Database = {
           user_id: string
           website: string | null
           whatsapp: string | null
+          last_contact_at: string | null
+          next_contact_at: string | null
         }
         Insert: {
           address?: string | null
@@ -143,6 +145,8 @@ export type Database = {
           user_id: string
           website?: string | null
           whatsapp?: string | null
+          last_contact_at?: string | null
+          next_contact_at?: string | null
         }
         Update: {
           address?: string | null
@@ -175,6 +179,8 @@ export type Database = {
           user_id?: string
           website?: string | null
           whatsapp?: string | null
+          last_contact_at?: string | null
+          next_contact_at?: string | null
         }
         Relationships: [
           {
@@ -324,6 +330,9 @@ export type Database = {
           state: string | null
           total_results: number
           user_id: string
+          cep: string | null
+          latitude: number | null
+          longitude: number | null
         }
         Insert: {
           city?: string | null
@@ -336,6 +345,9 @@ export type Database = {
           state?: string | null
           total_results?: number
           user_id: string
+          cep?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Update: {
           city?: string | null
@@ -348,6 +360,9 @@ export type Database = {
           state?: string | null
           total_results?: number
           user_id?: string
+          cep?: string | null
+          latitude?: number | null
+          longitude?: number | null
         }
         Relationships: []
       }
