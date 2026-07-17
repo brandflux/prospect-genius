@@ -83,7 +83,11 @@ export type Database = {
         Row: {
           address: string | null
           category: string | null
+          city: string | null
+          country: string | null
           created_at: string
+          email: string | null
+          favorite: boolean
           google_maps_url: string | null
           google_place_id: string | null
           has_website: boolean | null
@@ -92,12 +96,16 @@ export type Database = {
           lead_score: number
           longitude: number | null
           name: string
+          notes: string | null
           notes_count: number
           opening_hours: Json | null
+          opportunity: string
+          osm_id: string | null
           phone: string | null
           rating: number | null
           reviews_count: number | null
           search_id: string | null
+          state: string | null
           status: Database["public"]["Enums"]["lead_status"]
           updated_at: string
           user_id: string
@@ -107,7 +115,11 @@ export type Database = {
         Insert: {
           address?: string | null
           category?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          email?: string | null
+          favorite?: boolean
           google_maps_url?: string | null
           google_place_id?: string | null
           has_website?: boolean | null
@@ -116,12 +128,16 @@ export type Database = {
           lead_score?: number
           longitude?: number | null
           name: string
+          notes?: string | null
           notes_count?: number
           opening_hours?: Json | null
+          opportunity?: string
+          osm_id?: string | null
           phone?: string | null
           rating?: number | null
           reviews_count?: number | null
           search_id?: string | null
+          state?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
           user_id: string
@@ -131,7 +147,11 @@ export type Database = {
         Update: {
           address?: string | null
           category?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          email?: string | null
+          favorite?: boolean
           google_maps_url?: string | null
           google_place_id?: string | null
           has_website?: boolean | null
@@ -140,12 +160,16 @@ export type Database = {
           lead_score?: number
           longitude?: number | null
           name?: string
+          notes?: string | null
           notes_count?: number
           opening_hours?: Json | null
+          opportunity?: string
+          osm_id?: string | null
           phone?: string | null
           rating?: number | null
           reviews_count?: number | null
           search_id?: string | null
+          state?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
           user_id?: string
@@ -298,6 +322,7 @@ export type Database = {
           radius_km: number
           result_count: number
           state: string | null
+          total_results: number
           user_id: string
         }
         Insert: {
@@ -309,6 +334,7 @@ export type Database = {
           radius_km?: number
           result_count?: number
           state?: string | null
+          total_results?: number
           user_id: string
         }
         Update: {
@@ -320,6 +346,7 @@ export type Database = {
           radius_km?: number
           result_count?: number
           state?: string | null
+          total_results?: number
           user_id?: string
         }
         Relationships: []
@@ -351,6 +378,10 @@ export type Database = {
     }
     Functions: {
       calculate_lead_score: { Args: { _company_id: string }; Returns: number }
+      compute_company_score: {
+        Args: { _company: Database["public"]["Tables"]["companies"]["Row"] }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
