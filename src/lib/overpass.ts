@@ -8,15 +8,15 @@ export type CategoryPreset = {
 };
 
 export const CATEGORY_PRESETS: CategoryPreset[] = [
-  { value: "restaurant", label: "Restaurante", filters: [`["amenity"="restaurant"]`] },
-  { value: "marmoraria", label: "Marmoraria", filters: [`["shop"="stonemason"]`, `["craft"="stone_cutter"]`, `["shop"="stone"]`] },
-  { value: "dentist", label: "Dentista", filters: [`["amenity"="dentist"]`] },
+  { value: "restaurant", label: "Restaurante", filters: [`["amenity"="restaurant"]`, `["amenity"="food_court"]`] },
+  { value: "marmoraria", label: "Marmoraria", filters: [`["shop"="stonemason"]`, `["craft"="stone_cutter"]`, `["shop"="stone"]`, `["craft"="stonemason"]`] },
+  { value: "dentist", label: "Dentista", filters: [`["amenity"="dentist"]`, `["healthcare"="dentist"]`] },
   { value: "advogado", label: "Advogado", filters: [`["office"="lawyer"]`, `["office"="lawyers"]`, `["office"="estate_agent"]`] },
-  { value: "gym", label: "Academia", filters: [`["leisure"="fitness_centre"]`, `["sport"="fitness"]`] },
+  { value: "gym", label: "Academia", filters: [`["leisure"="fitness_centre"]`, `["sport"="fitness"]`, `["amenity"="gym"]`] },
   { value: "auto_escola", label: "Auto Escola", filters: [`["amenity"="driving_school"]`, `["driving_school"="yes"]`] },
-  { value: "pharmacy", label: "Farmácia", filters: [`["amenity"="pharmacy"]`] },
+  { value: "pharmacy", label: "Farmácia", filters: [`["amenity"="pharmacy"]`, `["healthcare"="pharmacy"]`] },
   { value: "bakery", label: "Padaria", filters: [`["shop"="bakery"]`] },
-  { value: "clinic", label: "Clínica", filters: [`["amenity"="clinic"]`, `["amenity"="doctors"]`] },
+  { value: "clinic", label: "Clínica", filters: [`["amenity"="clinic"]`, `["amenity"="doctors"]`, `["healthcare"="clinic"]`, `["healthcare"="doctor"]`] },
   { value: "supermarket", label: "Mercado", filters: [`["shop"="supermarket"]`, `["shop"="convenience"]`] },
   { value: "hotel", label: "Hotel", filters: [`["tourism"="hotel"]`, `["tourism"="guest_house"]`, `["tourism"="hostel"]`] },
   { value: "car_repair", label: "Oficina", filters: [`["shop"="car_repair"]`] },

@@ -15,7 +15,8 @@ import {
   ChevronRight, 
   Calendar,
   ExternalLink,
-  Lock
+  Lock,
+  Sparkles
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -872,6 +873,20 @@ function SearchPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Tip Card */}
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4 space-y-2">
+              <h4 className="text-xs font-semibold text-primary flex items-center gap-1.5">
+                <Sparkles className="size-3.5" /> Como obter mais resultados?
+              </h4>
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Utilizamos a base de dados pública do **OpenStreetMap**. 
+                Em cidades ou bairros menores, o mapeamento comercial pode ser menor. 
+                Se obtiver 0 resultados, tente **aumentar o raio de busca** (para 20km, 50km ou mais) ou buscar termos mais genéricos.
+              </p>
             </CardContent>
           </Card>
         </div>
