@@ -48,6 +48,7 @@ import {
   overpassSearchAround, 
   calculateDistance, 
   geocodeAddress,
+  geocodeCep,
   type OsmPoi 
 } from "@/lib/overpass";
 import { Map } from "@/components/map";
@@ -233,19 +234,25 @@ function SearchPage() {
           setEstado(data.uf || "");
 
           // Convert to coordinates using Nominatim
-          const addressStr = `${data.logradouro || ""}, ${data.bairro || ""}, ${data.localidade || ""}, ${data.uf || ""}, Brasil`;
-          const geo = await geocodeAddress(addressStr);
-          if (geo) {
-            setLat(parseFloat(geo.lat));
-            setLon(parseFloat(geo.lon));
+          const cepGeo = await geocodeCep(cleanCep);
+          if (cepGeo) {
+            setLat(parseFloat(cepGeo.lat));
+            setLon(parseFloat(cepGeo.lon));
           } else {
-            // Try with city/state if full address fails
-            const fallbackGeo = await geocodeAddress(`${data.localidade || ""}, ${data.uf || ""}, Brasil`);
-            if (fallbackGeo) {
-              setLat(parseFloat(fallbackGeo.lat));
-              setLon(parseFloat(fallbackGeo.lon));
+            const addressStr = `${data.logradouro || ""}, ${data.bairro || ""}, ${data.localidade || ""}, ${data.uf || ""}, Brasil`;
+            const geo = await geocodeAddress(addressStr);
+            if (geo) {
+              setLat(parseFloat(geo.lat));
+              setLon(parseFloat(geo.lon));
             } else {
-              toast.warning("Não foi possível localizar as coordenadas exatas deste CEP no mapa.");
+              // Try with city/state if full address fails
+              const fallbackGeo = await geocodeAddress(`${data.localidade || ""}, ${data.uf || ""}, Brasil`);
+              if (fallbackGeo) {
+                setLat(parseFloat(fallbackGeo.lat));
+                setLon(parseFloat(fallbackGeo.lon));
+              } else {
+                toast.warning("Não foi possível localizar as coordenadas exatas deste CEP no mapa.");
+              }
             }
           }
         } catch (err) {

@@ -80,6 +80,20 @@ export async function geocodeAddress(addressStr: string): Promise<NominatimResul
   return data[0] ?? null;
 }
 
+export async function geocodeCep(cep: string): Promise<NominatimResult | null> {
+  const url = new URL("https://nominatim.openstreetmap.org/search");
+  url.searchParams.set("postalcode", cep);
+  url.searchParams.set("country", "Brazil");
+  url.searchParams.set("format", "json");
+  url.searchParams.set("limit", "1");
+  const res = await fetch(url.toString(), {
+    headers: { "User-Agent": "LeadFinder-Prospecting-App/1.0" },
+  });
+  if (!res.ok) throw new Error(`Nominatim: ${res.status}`);
+  const data = (await res.json()) as NominatimResult[];
+  return data[0] ?? null;
+}
+
 type OverpassElement = {
   type: "node" | "way" | "relation";
   id: number;
