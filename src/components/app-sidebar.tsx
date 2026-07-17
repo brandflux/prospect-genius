@@ -75,9 +75,8 @@ export function AppSidebar() {
       <SidebarFooter>
         {!collapsed && (
           <div className="rounded-lg border border-border/60 bg-card/50 p-3 text-xs text-muted-foreground">
-            <div className="mb-1 font-medium text-foreground">Etapa 1 · Fundação</div>
-            Conecte o Supabase em <code className="text-primary">.env.local</code> para
-            habilitar auth e dados.
+            <div className="mb-1 font-medium text-foreground">Lovable Cloud</div>
+            Backend conectado. Auth, banco e functions prontos para uso.
           </div>
         )}
       </SidebarFooter>
