@@ -14,16 +14,361 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activities: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          id: string
+          payload: Json | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          channel: Database["public"]["Enums"]["message_channel"]
+          created_at: string
+          id: string
+          name: string
+          template: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["message_channel"]
+          created_at?: string
+          id?: string
+          name: string
+          template?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["message_channel"]
+          created_at?: string
+          id?: string
+          name?: string
+          template?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      companies: {
+        Row: {
+          address: string | null
+          category: string | null
+          created_at: string
+          google_maps_url: string | null
+          google_place_id: string | null
+          has_website: boolean | null
+          id: string
+          latitude: number | null
+          lead_score: number
+          longitude: number | null
+          name: string
+          notes_count: number
+          opening_hours: Json | null
+          phone: string | null
+          rating: number | null
+          reviews_count: number | null
+          search_id: string | null
+          status: Database["public"]["Enums"]["lead_status"]
+          updated_at: string
+          user_id: string
+          website: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          address?: string | null
+          category?: string | null
+          created_at?: string
+          google_maps_url?: string | null
+          google_place_id?: string | null
+          has_website?: boolean | null
+          id?: string
+          latitude?: number | null
+          lead_score?: number
+          longitude?: number | null
+          name: string
+          notes_count?: number
+          opening_hours?: Json | null
+          phone?: string | null
+          rating?: number | null
+          reviews_count?: number | null
+          search_id?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+          user_id: string
+          website?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          address?: string | null
+          category?: string | null
+          created_at?: string
+          google_maps_url?: string | null
+          google_place_id?: string | null
+          has_website?: boolean | null
+          id?: string
+          latitude?: number | null
+          lead_score?: number
+          longitude?: number | null
+          name?: string
+          notes_count?: number
+          opening_hours?: Json | null
+          phone?: string | null
+          rating?: number | null
+          reviews_count?: number | null
+          search_id?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_search_id_fkey"
+            columns: ["search_id"]
+            isOneToOne: false
+            referencedRelation: "searches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      favorites: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          channel: Database["public"]["Enums"]["message_channel"]
+          company_id: string
+          content: string
+          created_at: string
+          id: string
+          sent_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel: Database["public"]["Enums"]["message_channel"]
+          company_id: string
+          content: string
+          created_at?: string
+          id?: string
+          sent_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel?: Database["public"]["Enums"]["message_channel"]
+          company_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          sent_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notes: {
+        Row: {
+          company_id: string
+          content: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          content: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      searches: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          id: string
+          keyword: string
+          radius_km: number
+          result_count: number
+          state: string | null
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          keyword: string
+          radius_km?: number
+          result_count?: number
+          state?: string | null
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          keyword?: string
+          radius_km?: number
+          result_count?: number
+          state?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_lead_score: { Args: { _company_id: string }; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      lead_status:
+        | "novo"
+        | "contatado"
+        | "respondeu"
+        | "negociacao"
+        | "cliente"
+        | "perdido"
+      message_channel: "whatsapp" | "email" | "instagram"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +495,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      lead_status: [
+        "novo",
+        "contatado",
+        "respondeu",
+        "negociacao",
+        "cliente",
+        "perdido",
+      ],
+      message_channel: ["whatsapp", "email", "instagram"],
+    },
   },
 } as const
