@@ -14,7 +14,8 @@ import {
   ArrowUpDown, 
   ChevronRight, 
   Calendar,
-  ExternalLink
+  ExternalLink,
+  Lock
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,6 +130,21 @@ function SearchPage() {
       loadHistory();
     }
   }, [searchId]);
+
+  // Load logged-in user's profile to check if approved
+  const { data: profile = null, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ["current-user-profile"],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return null;
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userData.user.id)
+        .single();
+      return data;
+    }
+  });
 
   // Sorting state
   const [sortKey, setSortKey] = useState<"distance" | "name" | "category" | "no-website" | "phone" | "email">("distance");
@@ -575,6 +591,36 @@ function SearchPage() {
       setSortAsc(true);
     }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <AppShell title="Buscar Empresas" description="Carregando perfil do usuário...">
+        <div className="flex justify-center items-center py-24">
+          <Loader2 className="size-8 animate-spin text-primary" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (profile && !profile.is_approved) {
+    return (
+      <AppShell title="Buscar Empresas" description="Acesso Restrito">
+        <div className="flex flex-col items-center justify-center text-center py-20 px-4 max-w-md mx-auto space-y-4">
+          <div className="grid size-16 place-items-center rounded-2xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/30 animate-pulse">
+            <Lock className="size-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-100">Acesso Pendente de Aprovação</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Sua conta foi criada com sucesso, mas a funcionalidade de busca de empresas está desativada no momento. 
+            Entre em contato com o administrador para autorizar seu acesso.
+          </p>
+          <div className="pt-2 text-xs text-muted-foreground">
+            E-mail cadastrado: <span className="font-semibold text-slate-300">{profile.email}</span>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell title="Buscar Empresas" description="Fonte de dados: OpenStreetMap + Overpass API">

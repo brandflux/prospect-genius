@@ -299,6 +299,8 @@ export type Database = {
           full_name: string | null
           id: string
           updated_at: string
+          phone: string | null
+          is_approved: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -307,6 +309,8 @@ export type Database = {
           full_name?: string | null
           id: string
           updated_at?: string
+          phone?: string | null
+          is_approved?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -315,6 +319,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+          phone?: string | null
+          is_approved?: boolean
         }
         Relationships: []
       }

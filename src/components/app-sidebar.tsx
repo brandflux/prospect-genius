@@ -1,10 +1,12 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Search,
   KanbanSquare,
   Sparkles,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -23,18 +25,35 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const items = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Buscar empresas", url: "/search", icon: Search },
-  { title: "CRM", url: "/crm", icon: KanbanSquare },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
+
+  const { data: isAdmin = false } = useQuery({
+    queryKey: ["is-admin-check"],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return false;
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      return !!data;
+    }
+  });
+
+  const menuItems = [
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Buscar empresas", url: "/search", icon: Search },
+    { title: "CRM", url: "/crm", icon: KanbanSquare },
+    ...(isAdmin ? [{ title: "Painel Adm", url: "/admin", icon: Shield }] : []),
+  ];
+
   async function signOut() {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
@@ -62,7 +81,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {menuItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton asChild isActive={isActive(item.url)}>
                     <Link to={item.url} className="flex items-center gap-2">
