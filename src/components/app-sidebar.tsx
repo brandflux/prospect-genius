@@ -1,12 +1,13 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Search,
   KanbanSquare,
-  MessageSquare,
-  Settings,
   Sparkles,
+  LogOut,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 import {
   Sidebar,
@@ -26,15 +27,18 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Buscar empresas", url: "/search", icon: Search },
   { title: "CRM", url: "/crm", icon: KanbanSquare },
-  { title: "Mensagens IA", url: "/messages", icon: MessageSquare },
-  { title: "Configurações", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
+  const navigate = useNavigate();
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
+  async function signOut() {
+    await supabase.auth.signOut();
+    navigate({ to: "/auth" });
+  }
 
   return (
     <Sidebar collapsible="icon">
@@ -73,12 +77,10 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        {!collapsed && (
-          <div className="rounded-lg border border-border/60 bg-card/50 p-3 text-xs text-muted-foreground">
-            <div className="mb-1 font-medium text-foreground">Lovable Cloud</div>
-            Backend conectado. Auth, banco e functions prontos para uso.
-          </div>
-        )}
+        <Button variant="ghost" size="sm" className="w-full justify-start" onClick={signOut}>
+          <LogOut className="size-4" />
+          {!collapsed && <span className="ml-2">Sair</span>}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
