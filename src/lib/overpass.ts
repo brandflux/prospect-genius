@@ -157,7 +157,7 @@ export async function overpassSearchAround(opts: {
   const parts = opts.filters
     .map(
       (f) =>
-        `node${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});way${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});relation${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});`,
+        `node${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});way${f}(around:${opts.radiusMeters},${opts.lat},${opts.lon});`,
     )
     .join("\n");
   const query = `[out:json][timeout:30];(\n${parts}\n);out center tags ${opts.limit ?? 200};`;
