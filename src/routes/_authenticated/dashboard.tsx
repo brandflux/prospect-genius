@@ -8,10 +8,13 @@ import {
   Star, 
   Search as SearchIcon,
   ChevronRight,
-  Clock
+  Clock,
+  Lock,
+  Sparkles
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -27,6 +30,30 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 
 function DashboardPage() {
   const navigate = useNavigate();
+
+  // Fetch subscription and trial status
+  const { data: subData } = useQuery({
+    queryKey: ["user-subscription-status"],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return { isPro: false, trial: null, isTrialFinished: true, userId: null };
+
+      const [subRes, trialRes] = await Promise.all([
+        supabase.from("subscriptions").select("*").eq("user_id", userData.user.id).maybeSingle(),
+        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle()
+      ]);
+
+      const isPro = subRes.data?.status === "active";
+      const isTrialFinished = trialRes.data?.trial_finished || (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
+
+      return {
+        isPro,
+        trial: trialRes.data,
+        isTrialFinished,
+        userId: userData.user.id,
+      };
+    }
+  });
 
   const { data } = useQuery({
     queryKey: ["dashboard-kpis-and-searches"],
@@ -72,6 +99,82 @@ function DashboardPage() {
   return (
     <AppShell title="Dashboard" description="Visão geral da sua prospecção">
       <div className="space-y-6">
+        {/* Trial / Subscription Status Card */}
+        {subData && (
+          <Card className={`overflow-hidden border relative bg-card/60 ${
+            subData.isPro 
+              ? "border-primary/30 bg-gradient-to-r from-primary/5 via-transparent to-transparent" 
+              : subData.isTrialFinished 
+                ? "border-amber-500/20 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent" 
+                : "border-slate-800"
+          }`}>
+            <CardContent className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="space-y-2 flex-1">
+                <div className="flex items-center gap-2">
+                  {subData.isPro ? (
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-xs font-semibold px-2.5 py-0.5 uppercase">
+                      ✨ LeadFinder Pro Active
+                    </Badge>
+                  ) : subData.isTrialFinished ? (
+                    <Badge variant="outline" className="border-amber-500/30 text-amber-400 bg-amber-500/5 text-xs font-semibold px-2.5 py-0.5 uppercase">
+                      🔒 Trial Expired
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 bg-yellow-500/5 text-xs font-semibold px-2.5 py-0.5 uppercase">
+                      🟡 Free Trial
+                    </Badge>
+                  )}
+                </div>
+                
+                {subData.isPro ? (
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-100">Unlimited Searches & CRM Active</h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Sua conta possui acesso ilimitado a todas as buscas, filtros avançados por CEP, coordenadas e CRM.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-100">
+                        {subData.isTrialFinished ? "Seu período de teste grátis expirou" : "1 Search Included"}
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {subData.isTrialFinished 
+                          ? "Faça o upgrade para o LeadFinder Pro para desbloquear buscas ilimitadas." 
+                          : "Cada pesquisa no trial libera a visualização dos 20 primeiros leads."}
+                      </p>
+                    </div>
+
+                    {/* Progress Bar & Counters */}
+                    <div className="space-y-1.5 max-w-md">
+                      <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                        <span>Searches Used: {subData.trial?.searches_used ?? 0} / 1</span>
+                        <span>Results Available: 20 / Total</span>
+                      </div>
+                      <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-border/20">
+                        <div 
+                          className={`h-full transition-all duration-500 ${subData.isTrialFinished ? "bg-amber-500" : "bg-yellow-500"}`} 
+                          style={{ width: subData.isTrialFinished ? "100%" : "0%" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {!subData.isPro && (
+                <Button 
+                  onClick={() => navigate({ to: "/pricing" })}
+                  className="bg-primary hover:bg-primary/95 text-white font-semibold text-xs h-10 px-5 shadow-lg shadow-primary/20 shrink-0 w-full md:w-auto"
+                >
+                  Upgrade to Pro
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* KPIs grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {kpis.map((k) => (

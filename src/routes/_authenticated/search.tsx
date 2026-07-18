@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
@@ -16,7 +16,8 @@ import {
   Calendar,
   ExternalLink,
   Lock,
-  Sparkles
+  Sparkles,
+  Check
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   CATEGORY_PRESETS, 
@@ -96,6 +104,7 @@ export const Route = createFileRoute("/_authenticated/search")({
 
 function SearchPage() {
   const { searchId } = Route.useSearch();
+  const navigate = useNavigate();
   const qc = useQueryClient();
   const [searchMode, setSearchMode] = useState<"gps" | "cep">("gps");
   const [categoryInput, setCategoryInput] = useState("");
@@ -112,6 +121,9 @@ function SearchPage() {
   const [radiusKm, setRadiusKm] = useState(5);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<OsmPoi[]>([]);
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [firstSearchPopupOpen, setFirstSearchPopupOpen] = useState(false);
+  const [firstSearchDoneCount, setFirstSearchDoneCount] = useState(0);
   const [selectedSearchId, setSelectedSearchId] = useState<string | null>(null);
 
   // Load search from query param searchId
@@ -145,6 +157,30 @@ function SearchPage() {
         .eq("id", userData.user.id)
         .single();
       return data;
+    }
+  });
+
+  // Fetch subscription and trial status
+  const { data: subData, isLoading: isLoadingSub } = useQuery({
+    queryKey: ["user-subscription-status"],
+    queryFn: async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return { isPro: false, trial: null, isTrialFinished: true, userId: null };
+
+      const [subRes, trialRes] = await Promise.all([
+        supabase.from("subscriptions").select("*").eq("user_id", userData.user.id).maybeSingle(),
+        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle()
+      ]);
+
+      const isPro = subRes.data?.status === "active";
+      const isTrialFinished = trialRes.data?.trial_finished || (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
+
+      return {
+        isPro,
+        trial: trialRes.data,
+        isTrialFinished,
+        userId: userData.user.id,
+      };
     }
   });
 
@@ -310,6 +346,12 @@ function SearchPage() {
     e.preventDefault();
     if (!categoryInput.trim()) return toast.error("Informe a categoria de busca.");
 
+    // Check trial limits
+    if (subData && !subData.isPro && subData.isTrialFinished) {
+      setUpgradeModalOpen(true);
+      return;
+    }
+
     setLoading(true);
     setResults([]);
     try {
@@ -430,6 +472,21 @@ function SearchPage() {
       setResults(withDistance);
       toast.success(`${pois.length} empresas encontradas e salvas.`);
       refetchSearches();
+
+      // Update trial usage if this was the user's first search in trial mode
+      if (subData && !subData.isPro && !subData.isTrialFinished) {
+        await supabase
+          .from("trial_usage")
+          .update({
+            searches_used: 1,
+            trial_finished: true,
+          })
+          .eq("user_id", subData.userId);
+
+        qc.invalidateQueries({ queryKey: ["user-subscription-status"] });
+        setFirstSearchDoneCount(pois.length);
+        setFirstSearchPopupOpen(true);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro na pesquisa.");
     } finally {
@@ -632,7 +689,7 @@ function SearchPage() {
     }
   };
 
-  if (isLoadingProfile) {
+  if (isLoadingProfile || isLoadingSub) {
     return (
       <AppShell title="Buscar Empresas" description="Carregando perfil do usuário...">
         <div className="flex justify-center items-center py-24">
@@ -932,8 +989,9 @@ function SearchPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {sortedResults.map((r) => {
+                      {sortedResults.map((r, index) => {
                         const hasWeb = r.website != null && r.website.trim() !== "";
+                        const isLocked = !subData?.isPro && index >= 20;
                         
                         // Default values for CRM fields since they are fetched inline
                         const wa = whatsappLink(r.phone);
@@ -945,63 +1003,125 @@ function SearchPage() {
                           : "—";
 
                         return (
-                          <TableRow 
-                            key={r.osm_id} 
-                            className="cursor-pointer"
-                            onClick={() => handleOpenCRMDetails(r.osm_id)}
-                          >
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              <StarButton osmId={r.osm_id} />
-                            </TableCell>
-                            <TableCell className="font-medium text-slate-200">
-                              {r.name}
-                            </TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {r.category || "—"}
-                            </TableCell>
-                            <TableCell className="text-xs text-slate-200 tabular-nums">
-                              {distanceDisplay}
-                            </TableCell>
-                            <TableCell>
-                              {hasWeb ? (
-                                <a 
-                                  href={r.website!} 
-                                  target="_blank" 
-                                  rel="noreferrer" 
-                                  className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  Site <ExternalLink className="size-3" />
-                                </a>
-                              ) : (
-                                <Badge className="border-transparent bg-rose-500/15 text-rose-300 text-[10px]">
-                                  🔴 SEM WEBSITE
-                                </Badge>
-                              )}
-                            </TableCell>
-                            <TableCell onClick={(e) => e.stopPropagation()} className="py-2">
-                              <div className="flex flex-col gap-1">
-                                <span className="text-[10px] text-muted-foreground">{r.city || "—"}</span>
-                                <CRMStatusSelector osmId={r.osm_id} />
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                              <div className="inline-flex gap-1">
-                                {tel && (
-                                  <Button asChild size="icon" variant="ghost" className="h-8 w-8" title="Ligar">
-                                    <a href={tel}><Phone className="size-3.5" /></a>
-                                  </Button>
+                          <React.Fragment key={r.osm_id}>
+                            {index === 20 && (
+                              <TableRow key="premium-unlock-row" className="hover:bg-transparent border-t border-border/60 bg-gradient-to-b from-primary/5 to-transparent">
+                                <TableCell colSpan={7} className="p-6 text-center">
+                                  <div className="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto p-5 rounded-xl border border-primary/20 bg-slate-950/90 shadow-2xl backdrop-blur-md">
+                                    <div className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary">
+                                      <Lock className="size-5" />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <h4 className="text-xs font-bold text-slate-100 flex items-center justify-center gap-1.5">
+                                        🔒 Unlock All Results
+                                      </h4>
+                                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                        We found <span className="font-semibold text-slate-300">{results.length} Businesses</span>. 
+                                        Your free account allows viewing only the first 20 businesses.
+                                        Upgrade to LeadFinder Pro and unlock all results instantly.
+                                      </p>
+                                    </div>
+                                    <div className="text-xs font-bold text-primary">US$25/month</div>
+                                    <Button 
+                                      size="sm" 
+                                      className="w-full text-[11px] font-semibold h-8"
+                                      onClick={() => navigate({ to: "/pricing" })}
+                                    >
+                                      Upgrade Now
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            <TableRow 
+                              className={`transition-all ${isLocked ? "hover:bg-transparent cursor-default border-border/10 opacity-75" : "cursor-pointer"}`}
+                              onClick={() => !isLocked && handleOpenCRMDetails(r.osm_id)}
+                            >
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                {isLocked ? (
+                                  <Star className="size-4 text-slate-700 cursor-not-allowed" />
+                                ) : (
+                                  <StarButton osmId={r.osm_id} />
                                 )}
-                                {wa && (
-                                  <Button asChild size="icon" variant="ghost" className="h-8 w-8" title="WhatsApp">
-                                    <a href={wa} target="_blank" rel="noreferrer">
-                                      <MessageCircle className="size-3.5 text-emerald-400" />
-                                    </a>
-                                  </Button>
+                              </TableCell>
+                              <TableCell className="font-medium text-slate-200">
+                                {isLocked ? (
+                                  <span className="flex items-center gap-1.5 text-slate-400">
+                                    {r.name} <Lock className="size-3 text-slate-500" />
+                                  </span>
+                                ) : (
+                                  r.name
                                 )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
+                              </TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {r.category || "—"}
+                              </TableCell>
+                              <TableCell className="text-xs text-slate-200 tabular-nums">
+                                {isLocked ? (
+                                  <span className="blur-[4px] select-none text-slate-600">0.0 km</span>
+                                ) : (
+                                  distanceDisplay
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {isLocked ? (
+                                  <span className="blur-[4px] select-none text-[10px] text-slate-600 font-mono">
+                                    www.website.com
+                                  </span>
+                                ) : hasWeb ? (
+                                  <a 
+                                    href={r.website!} 
+                                    target="_blank" 
+                                    rel="noreferrer" 
+                                    className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    Site <ExternalLink className="size-3" />
+                                  </a>
+                                ) : (
+                                  <Badge className="border-transparent bg-rose-500/15 text-rose-300 text-[10px]">
+                                    🔴 SEM WEBSITE
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()} className="py-2">
+                                {isLocked ? (
+                                  <span className="blur-[4px] select-none text-[10px] text-slate-600">
+                                    Cidade Exemplo
+                                  </span>
+                                ) : (
+                                  <div className="flex flex-col gap-1">
+                                    <span className="text-[10px] text-muted-foreground">{r.city || "—"}</span>
+                                    <CRMStatusSelector osmId={r.osm_id} />
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                                <div className="inline-flex gap-1">
+                                  {isLocked ? (
+                                    <span className="text-[10px] font-semibold text-slate-500 bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5">
+                                      🔒 Lock
+                                    </span>
+                                  ) : (
+                                    <>
+                                      {tel && (
+                                        <Button asChild size="icon" variant="ghost" className="h-8 w-8" title="Ligar">
+                                          <a href={tel}><Phone className="size-3.5" /></a>
+                                        </Button>
+                                      )}
+                                      {wa && (
+                                        <Button asChild size="icon" variant="ghost" className="h-8 w-8" title="WhatsApp">
+                                          <a href={wa} target="_blank" rel="noreferrer">
+                                            <MessageCircle className="size-3.5 text-emerald-400" />
+                                          </a>
+                                        </Button>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </React.Fragment>
                         );
                       })}
                     </TableBody>
@@ -1019,6 +1139,101 @@ function SearchPage() {
         onClose={() => setSelectedCompanyId(null)}
         onUpdate={(patch) => selectedCompany && updateCompanyMutation.mutate({ id: selectedCompany.id, patch })}
       />
+
+      {/* Floating CTA Upgrade Button when Trial is Finished */}
+      {subData && !subData.isPro && subData.isTrialFinished && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={() => navigate({ to: "/pricing" })}
+            className="bg-primary text-white font-semibold text-xs h-11 px-5 shadow-2xl hover:scale-105 transition-all flex items-center gap-2 rounded-full border border-primary-foreground/15"
+          >
+            <Sparkles className="size-4 text-amber-300 animate-pulse" /> Upgrade to Pro
+          </Button>
+        </div>
+      )}
+
+      {/* Trial Expired / Upgrade Dialog Modal */}
+      <Dialog open={upgradeModalOpen} onOpenChange={setUpgradeModalOpen}>
+        <DialogContent className="sm:max-w-md bg-slate-950 border-border/80">
+          <DialogHeader className="flex flex-col items-center text-center space-y-3">
+            <div className="grid size-12 place-items-center rounded-xl bg-primary/10 text-primary border border-primary/20">
+              <Lock className="size-6 text-primary" />
+            </div>
+            <DialogTitle className="text-lg font-bold text-slate-100">🔒 Trial Expired</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
+              Você já realizou a sua única pesquisa gratuita do trial. 
+              Assine o plano **LeadFinder Pro** para ter buscas ilimitadas, acesso completo a todos os leads e muito mais.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-2">
+              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">INCLUSO NO PRO</span>
+              <ul className="grid grid-cols-2 gap-2 text-[10px] text-slate-300">
+                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Buscas Ilimitadas</li>
+                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Resultados sem Blur</li>
+                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> CRM Ilimitado</li>
+                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Filtros por CEP</li>
+              </ul>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={() => {
+                  setUpgradeModalOpen(false);
+                  navigate({ to: "/pricing" });
+                }} 
+                className="w-full text-xs font-semibold"
+              >
+                Upgrade to Pro (US$25/month)
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => setUpgradeModalOpen(false)} 
+                className="w-full text-xs text-muted-foreground hover:bg-slate-900"
+              >
+                Voltar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* First Search Done Conversion Dialog Modal */}
+      <Dialog open={firstSearchPopupOpen} onOpenChange={setFirstSearchPopupOpen}>
+        <DialogContent className="sm:max-w-md bg-slate-950 border-border/80 text-center">
+          <DialogHeader className="flex flex-col items-center space-y-3">
+            <div className="grid size-14 place-items-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-bounce">
+              <Sparkles className="size-7" />
+            </div>
+            <DialogTitle className="text-xl font-extrabold text-slate-100">🎉 Great Start!</DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
+              Your first search found <span className="font-semibold text-slate-300">{firstSearchDoneCount} Businesses</span>!
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-3">
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Only the first 20 are available on the Free Trial. Unlock the remaining {Math.max(0, firstSearchDoneCount - 20)} businesses by upgrading today.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Button 
+                onClick={() => {
+                  setFirstSearchPopupOpen(false);
+                  navigate({ to: "/pricing" });
+                }} 
+                className="w-full text-xs font-semibold"
+              >
+                Unlock All Results (US$25/month)
+              </Button>
+              <Button 
+                variant="ghost" 
+                onClick={() => setFirstSearchPopupOpen(false)} 
+                className="w-full text-xs text-muted-foreground hover:bg-slate-900"
+              >
+                Continuar no Trial
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }

@@ -391,6 +391,68 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          status: string
+          price_id: string | null
+          stripe_subscription_id: string | null
+          current_period_end: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: string
+          price_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: string
+          price_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trial_usage: {
+        Row: {
+          id: string
+          user_id: string
+          searches_used: number
+          results_viewed: number
+          trial_finished: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          searches_used?: number
+          results_viewed?: number
+          trial_finished?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          searches_used?: number
+          results_viewed?: number
+          trial_finished?: boolean
+          created_at?: string
+          updated_at?: string
+        }
         Relationships: []
       }
     }

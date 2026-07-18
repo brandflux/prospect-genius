@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
+import { Route as AuthenticatedPricingRouteImport } from './routes/_authenticated/pricing'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -42,6 +43,11 @@ const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
   path: '/search',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPricingRoute = AuthenticatedPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRoute
   '/crm': typeof AuthenticatedCrmRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/pricing': typeof AuthenticatedPricingRoute
   '/search': typeof AuthenticatedSearchRoute
 }
 export interface FileRoutesByTo {
@@ -74,6 +81,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminRoute
   '/crm': typeof AuthenticatedCrmRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/pricing': typeof AuthenticatedPricingRoute
   '/search': typeof AuthenticatedSearchRoute
 }
 export interface FileRoutesById {
@@ -85,6 +93,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/crm': typeof AuthenticatedCrmRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/pricing': typeof AuthenticatedPricingRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
 }
 export interface FileRouteTypes {
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/crm'
     | '/dashboard'
+    | '/pricing'
     | '/search'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/crm'
     | '/dashboard'
+    | '/pricing'
     | '/search'
   id:
     | '__root__'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/crm'
     | '/_authenticated/dashboard'
+    | '/_authenticated/pricing'
     | '/_authenticated/search'
   fileRoutesById: FileRoutesById
 }
@@ -162,6 +174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSearchRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pricing': {
+      id: '/_authenticated/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof AuthenticatedPricingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -190,6 +209,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedCrmRoute: typeof AuthenticatedCrmRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedPricingRoute: typeof AuthenticatedPricingRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
 }
 
@@ -197,6 +217,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedCrmRoute: AuthenticatedCrmRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedPricingRoute: AuthenticatedPricingRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
 }
 
