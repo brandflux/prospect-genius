@@ -167,7 +167,10 @@ export async function overpassSearchAround(opts: {
     try {
       const res = await fetchWithTimeout(server, {
         method: "POST",
-        headers: { "Content-Type": "text/plain" },
+        headers: { 
+          "Content-Type": "text/plain",
+          "User-Agent": "LeadFinder-Prospecting-App/1.0"
+        },
         body: query,
       }, 15000); // 15 seconds timeout per server
 
