@@ -24,3 +24,7 @@ BEGIN
 END $$;
 
 GRANT EXECUTE ON FUNCTION public.has_role(uuid, public.app_role) TO authenticated;
+
+-- 3. Garante que qualquer usuário existente esteja com acesso aprovado por padrão
+UPDATE public.profiles SET is_approved = true WHERE is_approved = false;
+

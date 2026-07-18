@@ -1,9 +1,9 @@
 -- 1. Adicionar colunas phone e is_approved à tabela profiles
 ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS phone text,
-  ADD COLUMN IF NOT EXISTS is_approved boolean NOT NULL DEFAULT false;
+  ADD COLUMN IF NOT EXISTS is_approved boolean NOT NULL DEFAULT true;
 
--- 2. Atualizar função trigger handle_new_user para associar is_approved = true para administradores
+-- 2. Atualizar função trigger handle_new_user para associar is_approved = true para todos
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -14,7 +14,7 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
     NEW.raw_user_meta_data->>'avatar_url',
     NEW.raw_user_meta_data->>'phone',
-    (NEW.email = 'brandfluxsm@gmail.com') -- Auto-aprova apenas o admin
+    true -- Auto-aprova todos os usuários
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,

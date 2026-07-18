@@ -91,7 +91,7 @@ BEGIN
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name'),
     NEW.raw_user_meta_data->>'avatar_url',
     NEW.raw_user_meta_data->>'phone',
-    (NEW.email = 'brandfluxsm@gmail.com')
+    true
   )
   ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
