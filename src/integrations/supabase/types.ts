@@ -49,6 +49,66 @@ export type Database = {
           },
         ]
       }
+      api_providers: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          display_name: string
+          active: boolean
+          has_key_configured: boolean
+          connection_status: string
+          last_connection_test: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          display_name: string
+          active?: boolean
+          has_key_configured?: boolean
+          connection_status?: string
+          last_connection_test?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          display_name?: string
+          active?: boolean
+          has_key_configured?: boolean
+          connection_status?: string
+          last_connection_test?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_provider_keys: {
+        Row: {
+          id: string
+          provider_id: string
+          api_key: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          provider_id: string
+          api_key: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          provider_id?: string
+          api_key?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           channel: Database["public"]["Enums"]["message_channel"]
@@ -113,6 +173,8 @@ export type Database = {
           whatsapp: string | null
           last_contact_at: string | null
           next_contact_at: string | null
+          provider: string
+          provider_reference: string | null
         }
         Insert: {
           address?: string | null
@@ -147,6 +209,8 @@ export type Database = {
           whatsapp?: string | null
           last_contact_at?: string | null
           next_contact_at?: string | null
+          provider?: string
+          provider_reference?: string | null
         }
         Update: {
           address?: string | null
@@ -181,6 +245,8 @@ export type Database = {
           whatsapp?: string | null
           last_contact_at?: string | null
           next_contact_at?: string | null
+          provider?: string
+          provider_reference?: string | null
         }
         Relationships: [
           {
@@ -339,6 +405,7 @@ export type Database = {
           cep: string | null
           latitude: number | null
           longitude: number | null
+          provider: string
         }
         Insert: {
           city?: string | null
@@ -354,6 +421,7 @@ export type Database = {
           cep?: string | null
           latitude?: number | null
           longitude?: number | null
+          provider?: string
         }
         Update: {
           city?: string | null
@@ -369,6 +437,7 @@ export type Database = {
           cep?: string | null
           latitude?: number | null
           longitude?: number | null
+          provider?: string
         }
         Relationships: []
       }

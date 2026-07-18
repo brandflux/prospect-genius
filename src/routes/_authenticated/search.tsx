@@ -17,12 +17,14 @@ import {
   ExternalLink,
   Lock,
   Sparkles,
-  Check
+  Check,
+  AlertCircle
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchProviderService } from "@/lib/providers/service";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
@@ -182,6 +184,12 @@ function SearchPage() {
         userId: userData.user.id,
       };
     }
+  });
+
+  // Query active search provider
+  const { data: activeProvider, isLoading: loadingProvider } = useQuery({
+    queryKey: ["active-search-provider"],
+    queryFn: () => SearchProviderService.getActiveProvider(),
   });
 
   // Sorting state
@@ -387,26 +395,11 @@ function SearchPage() {
         }
       }
 
-      const selectedPreset = CATEGORY_PRESETS.find(
-        (c) => c.label.toLowerCase() === categoryInput.toLowerCase()
-      );
-      
-      const filters = selectedPreset 
-        ? selectedPreset.filters 
-        : [
-            `["amenity"~"${categoryInput.trim().toLowerCase()}",i]`,
-            `["shop"~"${categoryInput.trim().toLowerCase()}",i]`,
-            `["office"~"${categoryInput.trim().toLowerCase()}",i]`,
-            `["leisure"~"${categoryInput.trim().toLowerCase()}",i]`,
-            `["craft"~"${categoryInput.trim().toLowerCase()}",i]`
-          ];
-
-      const radiusMeters = radiusKm * 1000;
-      const pois = await overpassSearchAround({
+      const pois = await SearchProviderService.search({
+        keyword: categoryInput,
         lat: searchLat,
         lon: searchLon,
-        radiusMeters,
-        filters,
+        radiusKm,
         limit: 200,
       });
 
@@ -428,6 +421,7 @@ function SearchPage() {
           cep: searchMode === "cep" ? cep : null,
           latitude: lat,
           longitude: lon,
+          provider: activeProvider?.provider || "openstreetmap",
         })
         .select("id")
         .single();
@@ -440,8 +434,8 @@ function SearchPage() {
         const rows = pois.map((p) => ({
           user_id: user.id,
           search_id: searchRecord.id,
-          osm_id: p.osm_id,
-          name: p.name,
+          osm_id: p.provider_reference, // compatibility with unique constraint
+          name: p.company_name,
           category: p.category || categoryInput,
           phone: p.phone,
           email: p.email,
@@ -451,6 +445,11 @@ function SearchPage() {
           state: p.state || estado || null,
           latitude: p.latitude,
           longitude: p.longitude,
+          rating: p.rating,
+          reviews_count: p.reviews,
+          google_maps_url: p.maps_url,
+          provider: p.provider,
+          provider_reference: p.provider_reference,
         }));
 
         const { error: upErr } = await supabase
@@ -466,7 +465,12 @@ function SearchPage() {
         if (p.latitude != null && p.longitude != null) {
           dist = calculateDistance(lat, lon, p.latitude, p.longitude);
         }
-        return { ...p, distanceKm: dist };
+        return { 
+          ...p, 
+          osm_id: p.provider_reference, // compatibility
+          name: p.company_name, // compatibility
+          distanceKm: dist 
+        };
       });
 
       setResults(withDistance);
@@ -719,8 +723,30 @@ function SearchPage() {
     );
   }
 
+  if (!loadingProvider && !activeProvider) {
+    return (
+      <AppShell title="Buscar Empresas" description="Provedores de dados de busca">
+        <div className="flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto min-h-[50vh] space-y-4">
+          <div className="grid size-12 place-items-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 animate-pulse">
+            <AlertCircle className="size-6" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-100">No Search Provider Configured</h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            To start searching businesses you must connect at least one Data Provider.
+          </p>
+          <Button 
+            className="text-xs font-semibold mt-2" 
+            onClick={() => navigate({ to: "/settings", search: { tab: "providers" } })}
+          >
+            Configure Providers
+          </Button>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
-    <AppShell title="Buscar Empresas" description="Fonte de dados: OpenStreetMap + Overpass API">
+    <AppShell title="Buscar Empresas" description={activeProvider ? `Fonte de dados: ${activeProvider.display_name}` : "Fonte de dados: OpenStreetMap + Overpass API"}>
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left column: Controls & History */}
         <div className="space-y-6 lg:col-span-1">

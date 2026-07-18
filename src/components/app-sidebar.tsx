@@ -5,8 +5,11 @@ import {
   Search,
   KanbanSquare,
   Sparkles,
-  LogOut,
   Shield,
+  User,
+  CreditCard,
+  Cpu,
+  LogOut,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,8 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const pathname = useRouterState({ select: (r) => r.location.pathname });
   const navigate = useNavigate();
+  const searchStr = useRouterState({ select: (r) => r.location.searchStr });
+  const activeTab = new URLSearchParams(searchStr).get("tab") || "profile";
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
 
   const { data: isAdmin = false } = useQuery({
@@ -118,6 +123,38 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Settings</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/settings" && activeTab === "profile"}>
+                  <Link to="/settings" search={{ tab: "profile" }} className="flex items-center gap-2">
+                    <User className="size-4" />
+                    {!collapsed && <span>Profile</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/settings" && activeTab === "billing"}>
+                  <Link to="/settings" search={{ tab: "billing" }} className="flex items-center gap-2">
+                    <CreditCard className="size-4" />
+                    {!collapsed && <span>Billing</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === "/settings" && activeTab === "providers"}>
+                  <Link to="/settings" search={{ tab: "providers" }} className="flex items-center gap-2">
+                    <Cpu className="size-4" />
+                    {!collapsed && <span>API Providers</span>}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
