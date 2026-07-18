@@ -49,6 +49,66 @@ export type Database = {
           },
         ]
       }
+      api_providers: {
+        Row: {
+          id: string
+          user_id: string
+          provider: string
+          display_name: string
+          active: boolean
+          has_key_configured: boolean
+          connection_status: string
+          last_connection_test: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          provider: string
+          display_name: string
+          active?: boolean
+          has_key_configured?: boolean
+          connection_status?: string
+          last_connection_test?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          provider?: string
+          display_name?: string
+          active?: boolean
+          has_key_configured?: boolean
+          connection_status?: string
+          last_connection_test?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      api_provider_keys: {
+        Row: {
+          id: string
+          provider_id: string
+          api_key: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          provider_id: string
+          api_key: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          provider_id?: string
+          api_key?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           channel: Database["public"]["Enums"]["message_channel"]
@@ -111,6 +171,10 @@ export type Database = {
           user_id: string
           website: string | null
           whatsapp: string | null
+          last_contact_at: string | null
+          next_contact_at: string | null
+          provider: string
+          provider_reference: string | null
         }
         Insert: {
           address?: string | null
@@ -143,6 +207,10 @@ export type Database = {
           user_id: string
           website?: string | null
           whatsapp?: string | null
+          last_contact_at?: string | null
+          next_contact_at?: string | null
+          provider?: string
+          provider_reference?: string | null
         }
         Update: {
           address?: string | null
@@ -175,6 +243,10 @@ export type Database = {
           user_id?: string
           website?: string | null
           whatsapp?: string | null
+          last_contact_at?: string | null
+          next_contact_at?: string | null
+          provider?: string
+          provider_reference?: string | null
         }
         Relationships: [
           {
@@ -293,6 +365,8 @@ export type Database = {
           full_name: string | null
           id: string
           updated_at: string
+          phone: string | null
+          is_approved: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -301,6 +375,8 @@ export type Database = {
           full_name?: string | null
           id: string
           updated_at?: string
+          phone?: string | null
+          is_approved?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -309,6 +385,8 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string
+          phone?: string | null
+          is_approved?: boolean
         }
         Relationships: []
       }
@@ -324,6 +402,10 @@ export type Database = {
           state: string | null
           total_results: number
           user_id: string
+          cep: string | null
+          latitude: number | null
+          longitude: number | null
+          provider: string
         }
         Insert: {
           city?: string | null
@@ -336,6 +418,10 @@ export type Database = {
           state?: string | null
           total_results?: number
           user_id: string
+          cep?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          provider?: string
         }
         Update: {
           city?: string | null
@@ -348,6 +434,10 @@ export type Database = {
           state?: string | null
           total_results?: number
           user_id?: string
+          cep?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          provider?: string
         }
         Relationships: []
       }
@@ -369,6 +459,69 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          status: string
+          price_id: string | null
+          stripe_subscription_id: string | null
+          current_period_end: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          status?: string
+          price_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          status?: string
+          price_id?: string | null
+          stripe_subscription_id?: string | null
+          current_period_end?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      trial_usage: {
+        Row: {
+          id: string
+          user_id: string
+          searches_used: number
+          results_viewed: number
+          trial_finished: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          searches_used?: number
+          results_viewed?: number
+          trial_finished?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          searches_used?: number
+          results_viewed?: number
+          trial_finished?: boolean
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
