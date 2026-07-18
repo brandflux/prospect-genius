@@ -10,6 +10,7 @@ import {
   MapPin,
   ExternalLink,
   Search as SearchIcon,
+  Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
@@ -86,14 +87,17 @@ function CrmPage() {
   const [onlyNoWeb, setOnlyNoWeb] = useState(false);
   const [onlyPhone, setOnlyPhone] = useState(false);
   const [onlyEmail, setOnlyEmail] = useState(false);
-  const [onlyFav, setOnlyFav] = useState(false);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Company | null>(null);
 
   const { data } = useQuery({
-    queryKey: ["companies", { query, onlyNoWeb, onlyPhone, onlyEmail, onlyFav, page }],
+    queryKey: ["companies", { query, onlyNoWeb, onlyPhone, onlyEmail, page }],
     queryFn: async () => {
-      let q = supabase.from("companies").select("*", { count: "exact" });
+      let q = supabase
+        .from("companies")
+        .select("*", { count: "exact" })
+        .eq("favorite", true); // List only favorited (starred) companies in the CRM
+
       if (query.trim()) {
         const like = `%${query.trim()}%`;
         q = q.or(`name.ilike.${like},category.ilike.${like},city.ilike.${like}`);
@@ -101,7 +105,7 @@ function CrmPage() {
       if (onlyNoWeb) q = q.or("website.is.null,website.eq.");
       if (onlyPhone) q = q.not("phone", "is", null).neq("phone", "");
       if (onlyEmail) q = q.not("email", "is", null).neq("email", "");
-      if (onlyFav) q = q.eq("favorite", true);
+
       q = q
         .order("lead_score", { ascending: false })
         .order("created_at", { ascending: false })
@@ -131,6 +135,28 @@ function CrmPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao atualizar"),
   });
 
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("companies")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["companies"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-kpis"] });
+      toast.success("Lead deletado com sucesso!");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao deletar lead"),
+  });
+
+  const handleDelete = (id: string) => {
+    if (confirm("Tem certeza que deseja deletar este lead?")) {
+      deleteMut.mutate(id);
+    }
+  };
+
   return (
     <AppShell title="CRM" description={`${total} empresa${total === 1 ? "" : "s"}`}>
       <Card className="border-border/60 bg-card/60 p-4">
@@ -150,7 +176,6 @@ function CrmPage() {
           <FilterToggle label="Sem site" checked={onlyNoWeb} onChange={(v) => { setOnlyNoWeb(v); setPage(0); }} />
           <FilterToggle label="Com telefone" checked={onlyPhone} onChange={(v) => { setOnlyPhone(v); setPage(0); }} />
           <FilterToggle label="Com e-mail" checked={onlyEmail} onChange={(v) => { setOnlyEmail(v); setPage(0); }} />
-          <FilterToggle label="Favoritos" checked={onlyFav} onChange={(v) => { setOnlyFav(v); setPage(0); }} />
         </div>
       </Card>
 
@@ -255,6 +280,15 @@ function CrmPage() {
                           </a>
                         </Button>
                       )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        title="Deletar"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDelete(c.id)}
+                      >
+                        <Trash2 className="size-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -278,6 +312,7 @@ function CrmPage() {
         company={selected}
         onClose={() => setSelected(null)}
         onUpdate={(patch) => selected && updateMut.mutate({ id: selected.id, patch })}
+        onDelete={(id) => deleteMut.mutate(id)}
       />
     </AppShell>
   );
@@ -304,10 +339,12 @@ function CompanyDrawer({
   company,
   onClose,
   onUpdate,
+  onDelete,
 }: {
   company: Company | null;
   onClose: () => void;
   onUpdate: (patch: Partial<Company>) => void;
+  onDelete: (id: string) => void;
 }) {
   const [notes, setNotes] = useState("");
   const [notesDirty, setNotesDirty] = useState(false);
@@ -389,6 +426,19 @@ function CompanyDrawer({
               >
                 <Star className={"mr-2 size-4 " + (company.favorite ? "fill-amber-400 text-amber-400" : "")} />
                 {company.favorite ? "Desfavoritar" : "Favoritar"}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  if (confirm("Tem certeza que deseja deletar este lead?")) {
+                    onDelete(company.id);
+                    onClose();
+                  }
+                }}
+              >
+                <Trash2 className="mr-2 size-4" />
+                Deletar
               </Button>
               {mapsUrl && (
                 <Button asChild variant="ghost" size="sm">
