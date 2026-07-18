@@ -36,7 +36,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { SearchProviderService } from "@/lib/providers/service";
 import { toast } from "sonner";
 
+type SettingsSearch = {
+  tab?: string;
+};
+
 export const Route = createFileRoute("/_authenticated/settings")({
+  validateSearch: (search: Record<string, unknown>): SettingsSearch => {
+    return {
+      tab: (search.tab as string) || "profile",
+    };
+  },
   head: () => ({
     meta: [
       { title: "Settings · LeadFinder" },
@@ -109,8 +118,7 @@ const PROVIDERS_LIST: ProviderDetails[] = [
 function SettingsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const searchStr = useRouterState({ select: (r) => r.location.searchStr });
-  const activeTab = new URLSearchParams(searchStr).get("tab") || "profile";
+  const { tab: activeTab } = Route.useSearch();
 
   const [configureProvider, setConfigureProvider] = useState<ProviderDetails | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
@@ -359,7 +367,7 @@ function SettingsPage() {
                   ? "border-primary text-primary bg-primary/5"
                   : "border-transparent text-muted-foreground hover:text-slate-200"
               }`}
-              onClick={() => navigate({ search: { tab: t.id } })}
+              onClick={() => navigate({ to: ".", search: { tab: t.id } })}
             >
               <t.icon className="size-3.5" />
               {t.label}

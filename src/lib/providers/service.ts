@@ -20,10 +20,10 @@ export const searchBusinessesServer = createServerFn({ method: "POST" })
     limit: number; 
     userId: string;
   }) => d)
-  .handler(async ({ input }) => {
-    if (input.provider === "openstreetmap") {
+  .handler(async ({ data }) => {
+    if (data.provider === "openstreetmap") {
       const osm = new OpenStreetMapProvider();
-      return osm.searchBusinesses(input);
+      return osm.searchBusinesses(data);
     }
 
     // Initialize secure server supabase client to select the key bypassing client RLS select block
@@ -34,8 +34,8 @@ export const searchBusinessesServer = createServerFn({ method: "POST" })
     const { data: provConfig } = await serverSupabase
       .from("api_providers")
       .select("id")
-      .eq("user_id", input.userId)
-      .eq("provider", input.provider)
+      .eq("user_id", data.userId)
+      .eq("provider", data.provider)
       .maybeSingle();
 
     if (!provConfig) throw new Error("Provedor não configurado no banco de dados.");
@@ -50,7 +50,7 @@ export const searchBusinessesServer = createServerFn({ method: "POST" })
     if (!apiKey) throw new Error("Chave API não configurada para este provedor.");
 
     let runner;
-    switch (input.provider) {
+    switch (data.provider) {
       case "google_places":
         runner = new GooglePlacesProvider();
         break;
@@ -64,16 +64,16 @@ export const searchBusinessesServer = createServerFn({ method: "POST" })
         runner = new ApifyProvider();
         break;
       default:
-        throw new Error(`Provedor ${input.provider} desconhecido.`);
+        throw new Error(`Provedor ${data.provider} desconhecido.`);
     }
 
-    return runner.searchBusinesses({ ...input, apiKey });
+    return runner.searchBusinesses({ ...data, apiKey });
   });
 
 // Server-side logic to test API key connections securely
 export const testConnectionServer = createServerFn({ method: "POST" })
   .validator((d: { provider: string; userId: string }) => d)
-  .handler(async ({ input }) => {
+  .handler(async ({ data }) => {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const { createClient } = await import("@supabase/supabase-js");
     const serverSupabase = createClient(process.env.SUPABASE_URL || "", serviceRoleKey || "");
@@ -81,8 +81,8 @@ export const testConnectionServer = createServerFn({ method: "POST" })
     const { data: provConfig } = await serverSupabase
       .from("api_providers")
       .select("id")
-      .eq("user_id", input.userId)
-      .eq("provider", input.provider)
+      .eq("user_id", data.userId)
+      .eq("provider", data.provider)
       .maybeSingle();
 
     if (!provConfig) return { success: false, message: "No API Key configured." };
@@ -97,29 +97,29 @@ export const testConnectionServer = createServerFn({ method: "POST" })
     if (!apiKey) return { success: false, message: "No API Key configured." };
 
     try {
-      if (input.provider === "google_places") {
+      if (data.provider === "google_places") {
         const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=-23.55,-46.63&radius=500&key=${apiKey}`;
         const res = await fetch(url);
-        const data = await res.json();
-        if (data.status === "REQUEST_DENIED") return { success: false, message: "Invalid API Key" };
+        const dataRes = await res.json();
+        if (dataRes.status === "REQUEST_DENIED") return { success: false, message: "Invalid API Key" };
         return { success: true, message: "Connection Successful" };
       }
       
-      if (input.provider === "outscraper") {
+      if (data.provider === "outscraper") {
         const url = `https://api.outscraper.com/maps/search-v2?query=dentist&limit=1&key=${apiKey}`;
         const res = await fetch(url);
         if (res.status === 401 || res.status === 403) return { success: false, message: "Invalid API Key" };
         return { success: true, message: "Connection Successful" };
       }
 
-      if (input.provider === "serpapi") {
+      if (data.provider === "serpapi") {
         const url = `https://serpapi.com/search.json?engine=google_maps&q=dentist&api_key=${apiKey}`;
         const res = await fetch(url);
         if (res.status === 401 || res.status === 403) return { success: false, message: "Invalid API Key" };
         return { success: true, message: "Connection Successful" };
       }
 
-      if (input.provider === "apify") {
+      if (data.provider === "apify") {
         const url = `https://api.apify.com/v2/users/me?token=${apiKey}`;
         const res = await fetch(url);
         if (!res.ok) return { success: false, message: "Invalid API Key" };
@@ -196,13 +196,15 @@ export const SearchProviderService = {
       
       // 2. Fallback: Executar no servidor via Server Function (Desenvolvimento local robusto)
       return searchBusinessesServer({
-        provider: active.provider,
-        keyword: params.keyword,
-        lat: params.lat,
-        lon: params.lon,
-        radiusKm: params.radiusKm,
-        limit: params.limit,
-        userId: userData.user.id,
+        data: {
+          provider: active.provider,
+          keyword: params.keyword,
+          lat: params.lat,
+          lon: params.lon,
+          radiusKm: params.radiusKm,
+          limit: params.limit,
+          userId: userData.user.id,
+        }
       });
     }
   },
@@ -220,7 +222,7 @@ export const SearchProviderService = {
       return data;
     } catch (err) {
       // 2. Fallback local para testes ininterruptos
-      return testConnectionServer({ provider, userId: userData.user.id });
+      return testConnectionServer({ data: { provider, userId: userData.user.id } });
     }
   }
 };

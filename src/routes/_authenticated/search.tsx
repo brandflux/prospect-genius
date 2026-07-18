@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   Search as SearchIcon, 
@@ -96,7 +96,7 @@ export const Route = createFileRoute("/_authenticated/search")({
       { name: "description", content: "Localize empresas ao redor de uma área geográfica." },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>) => {
+  validateSearch: (search: Record<string, unknown>): { searchId?: string } => {
     return {
       searchId: (search.searchId as string) || undefined,
     };
@@ -485,7 +485,7 @@ function SearchPage() {
             searches_used: 1,
             trial_finished: true,
           })
-          .eq("user_id", subData.userId);
+          .eq("user_id", subData.userId!);
 
         qc.invalidateQueries({ queryKey: ["user-subscription-status"] });
         setFirstSearchDoneCount(pois.length);

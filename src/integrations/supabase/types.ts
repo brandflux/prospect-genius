@@ -460,6 +460,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
+        Relationships: []
       }
       subscriptions: {
         Row: {
