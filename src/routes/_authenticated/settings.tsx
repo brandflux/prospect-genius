@@ -169,7 +169,7 @@ function SettingsPage() {
       ]);
 
       return {
-        isPro: subRes.data?.status === "active",
+        isPro: subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com",
         trial: trialRes.data,
       };
     }

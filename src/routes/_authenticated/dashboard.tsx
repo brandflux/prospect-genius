@@ -45,7 +45,7 @@ function DashboardPage() {
         supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle()
       ]);
 
-      const isPro = subRes.data?.status === "active";
+      const isPro = subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com";
       const isTrialFinished = trialRes.data?.trial_finished || (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
 
       return {

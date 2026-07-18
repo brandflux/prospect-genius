@@ -63,7 +63,7 @@ export function AppSidebar() {
         .eq("user_id", userData.user.id)
         .maybeSingle();
       return {
-        isPro: data?.status === "active",
+        isPro: data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com",
       };
     }
   });
