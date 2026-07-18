@@ -19,6 +19,7 @@ export const searchBusinessesServer = createServerFn({ method: "POST" })
     radiusKm: number; 
     limit: number; 
     userId: string;
+    token?: string;
   }) => d)
   .handler(async ({ data }) => {
     if (data.provider === "openstreetmap") {
@@ -29,7 +30,15 @@ export const searchBusinessesServer = createServerFn({ method: "POST" })
     // Initialize secure server supabase client to select the key bypassing client RLS select block
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const { createClient } = await import("@supabase/supabase-js");
-    const serverSupabase = createClient(process.env.SUPABASE_URL || "", serviceRoleKey || "");
+    const serverSupabase = createClient(
+      process.env.SUPABASE_URL || "", 
+      serviceRoleKey || "",
+      {
+        global: {
+          headers: data.token ? { Authorization: `Bearer ${data.token}` } : {},
+        },
+      }
+    );
 
     const { data: provConfig } = await serverSupabase
       .from("api_providers")
@@ -72,11 +81,19 @@ export const searchBusinessesServer = createServerFn({ method: "POST" })
 
 // Server-side logic to test API key connections securely
 export const testConnectionServer = createServerFn({ method: "POST" })
-  .validator((d: { provider: string; userId: string }) => d)
+  .validator((d: { provider: string; userId: string; token?: string }) => d)
   .handler(async ({ data }) => {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const { createClient } = await import("@supabase/supabase-js");
-    const serverSupabase = createClient(process.env.SUPABASE_URL || "", serviceRoleKey || "");
+    const serverSupabase = createClient(
+      process.env.SUPABASE_URL || "", 
+      serviceRoleKey || "",
+      {
+        global: {
+          headers: data.token ? { Authorization: `Bearer ${data.token}` } : {},
+        },
+      }
+    );
 
     const { data: provConfig } = await serverSupabase
       .from("api_providers")
@@ -195,6 +212,7 @@ export const SearchProviderService = {
       console.warn("Chamada Edge Function falhou ou indisponível. Executando fallback seguro no servidor...", err);
       
       // 2. Fallback: Executar no servidor via Server Function (Desenvolvimento local robusto)
+      const { data: sessionData } = await supabase.auth.getSession();
       return searchBusinessesServer({
         data: {
           provider: active.provider,
@@ -204,6 +222,7 @@ export const SearchProviderService = {
           radiusKm: params.radiusKm,
           limit: params.limit,
           userId: userData.user.id,
+          token: sessionData.session?.access_token,
         }
       });
     }
@@ -222,7 +241,14 @@ export const SearchProviderService = {
       return data;
     } catch (err) {
       // 2. Fallback local para testes ininterruptos
-      return testConnectionServer({ data: { provider, userId: userData.user.id } });
+      const { data: sessionData } = await supabase.auth.getSession();
+      return testConnectionServer({ 
+        data: { 
+          provider, 
+          userId: userData.user.id,
+          token: sessionData.session?.access_token,
+        } 
+      });
     }
   }
 };
