@@ -38,6 +38,6 @@ END $$;
 -- Garantir papel admin retroativamente caso o usuário já esteja criado
 INSERT INTO public.user_roles (user_id, role)
 SELECT id, 'admin'::public.app_role
-FROM auth.users
+FROM public.profiles
 WHERE email = 'brandfluxsm@gmail.com'
 ON CONFLICT (user_id, role) DO NOTHING;

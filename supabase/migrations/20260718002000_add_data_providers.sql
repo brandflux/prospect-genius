@@ -130,7 +130,7 @@ END $$;
 
 -- 6. Povoar dados retroativamente para usuários existentes
 INSERT INTO public.api_providers (user_id, provider, display_name, active, connection_status)
-SELECT id, 'openstreetmap', 'OpenStreetMap', true, 'connected' FROM auth.users
+SELECT id, 'openstreetmap', 'OpenStreetMap', true, 'connected' FROM public.profiles
 ON CONFLICT (user_id, provider) DO NOTHING;
 
 -- 7. Modificar a tabela companies para adicionar dados de provider e provider_reference

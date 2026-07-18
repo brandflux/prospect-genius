@@ -85,9 +85,9 @@ END $$;
 
 -- 4. Povoar dados retroativamente para usuários existentes
 INSERT INTO public.subscriptions (user_id, status)
-SELECT id, 'inactive' FROM auth.users
+SELECT id, 'inactive' FROM public.profiles
 ON CONFLICT (user_id) DO NOTHING;
 
 INSERT INTO public.trial_usage (user_id, searches_used, results_viewed, trial_finished)
-SELECT id, 0, 20, false FROM auth.users
+SELECT id, 0, 20, false FROM public.profiles
 ON CONFLICT (user_id) DO NOTHING;
