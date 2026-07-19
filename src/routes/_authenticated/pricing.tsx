@@ -11,7 +11,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/pricing")({
   head: () => ({
     meta: [
-      { title: "Pricing · LeadFinder" },
+      { title: "Preços · LeadFinder" },
       { name: "description", content: "Escolha o seu plano LeadFinder Pro." },
     ],
   }),
@@ -28,15 +28,32 @@ function PricingPage() {
     queryKey: ["user-subscription-status"],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return { isPro: false, userId: null };
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("status")
-        .eq("user_id", userData.user.id)
-        .maybeSingle();
+      if (!userData.user)
+        return {
+          isPro: false,
+          trial: null,
+          isTrialFinished: true,
+          userId: null,
+          subscription: null,
+        };
+
+      const [subRes, trialRes] = await Promise.all([
+        supabase.from("subscriptions").select("*").eq("user_id", userData.user.id).maybeSingle(),
+        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle(),
+      ]);
+
+      const isPro =
+        subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com";
+      const isTrialFinished =
+        trialRes.data?.trial_finished ||
+        (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
+
       return {
-        isPro: data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com",
+        isPro,
+        trial: trialRes.data,
+        isTrialFinished,
         userId: userData.user.id,
+        subscription: subRes.data,
       };
     },
   });
@@ -49,7 +66,7 @@ function PricingPage() {
 
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
-          priceId: "price_1TuvTV5CsIADizM8y5mwvMcH", // Substitua pelo seu ID de Preço do Stripe
+          priceId: "price_1Tv0ub8lQKFbrE2Mc5hUVrMj",
         },
       });
 
@@ -71,20 +88,23 @@ function PricingPage() {
   };
 
   const proFeatures = [
-    "Unlimited Business Searches",
-    "Unlimited Results",
-    "CRM Included",
-    "Favorites",
-    "Notes",
-    "Saved Searches",
-    "Radius Search",
-    "ZIP Code Search",
-    "Current Location Search",
-    "Future Updates Included",
+    "Pesquisas de Empresas Ilimitadas",
+    "Resultados Ilimitados",
+    "CRM Integrado Incluso",
+    "Favoritos de Leads",
+    "Notas de Contatos",
+    "Histórico de Buscas Salvas",
+    "Pesquisa por Raio de Cobertura",
+    "Pesquisa por CEP Estruturado",
+    "Pesquisa por Localização Atual",
+    "Atualizações Futuras Inclusas",
   ];
 
   return (
-    <AppShell title="Pricing" description="Find local businesses and prospect high-quality leads.">
+    <AppShell
+      title="Preços"
+      description="Encontre empresas locais e prospecte leads de alta qualidade."
+    >
       {checkoutSimulated ? (
         <div className="flex flex-col items-center justify-center text-center py-24 space-y-6 max-w-md mx-auto">
           <div className="relative">
@@ -115,11 +135,11 @@ function PricingPage() {
               ✨ LeadFinder Pro
             </Badge>
             <h1 className="text-3xl font-extrabold text-slate-100 md:text-4xl tracking-tight bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
-              Find Businesses Before Your Competitors
+              Encontre Empresas Antes dos Seus Concorrentes
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-lg mx-auto">
-              Find local businesses, organize your leads and manage your sales pipeline with one
-              simple platform.
+              Encontre empresas locais, organize seus leads e gerencie seu funil de vendas com uma
+              única plataforma simples.
             </p>
           </div>
 
@@ -165,7 +185,7 @@ function PricingPage() {
 
                 <CardHeader className="pb-4 border-b border-border/20">
                   <span className="text-xs font-semibold text-primary uppercase tracking-wider block mb-1">
-                    PRO PLAN
+                    PLANO PRO
                   </span>
                   <CardTitle className="text-2xl font-bold text-slate-100">
                     LeadFinder Pro
@@ -174,7 +194,7 @@ function PricingPage() {
                     <span className="text-3xl font-extrabold text-slate-100 tracking-tight">
                       US$ 25
                     </span>
-                    <span className="text-sm text-muted-foreground font-medium">/month</span>
+                    <span className="text-sm text-muted-foreground font-medium">/mês</span>
                   </div>
                   <span className="text-[10px] text-muted-foreground block mt-1">
                     Cobrança recorrente mensal. Cancele quando quiser.
@@ -196,7 +216,7 @@ function PricingPage() {
                     className="w-full h-11 text-xs font-semibold text-white bg-primary hover:bg-primary/95 transition-all shadow-md shadow-primary/20"
                     onClick={handleUpgrade}
                   >
-                    Start for US$25/month
+                    Começar por US$25/mês
                   </Button>
                 </CardContent>
               </Card>

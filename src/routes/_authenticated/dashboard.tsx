@@ -1,17 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { 
-  Building2, 
-  Globe2, 
-  MessageCircle, 
-  Trophy, 
-  Star, 
+import {
+  Building2,
+  Globe2,
+  MessageCircle,
+  Trophy,
+  Star,
   Search as SearchIcon,
   ChevronRight,
   Clock,
   Lock,
   Sparkles,
-  Cpu
+  Cpu,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,23 +38,34 @@ function DashboardPage() {
     queryKey: ["user-subscription-status"],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return { isPro: false, trial: null, isTrialFinished: true, userId: null };
+      if (!userData.user)
+        return {
+          isPro: false,
+          trial: null,
+          isTrialFinished: true,
+          userId: null,
+          subscription: null,
+        };
 
       const [subRes, trialRes] = await Promise.all([
         supabase.from("subscriptions").select("*").eq("user_id", userData.user.id).maybeSingle(),
-        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle()
+        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle(),
       ]);
 
-      const isPro = subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com";
-      const isTrialFinished = trialRes.data?.trial_finished || (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
+      const isPro =
+        subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com";
+      const isTrialFinished =
+        trialRes.data?.trial_finished ||
+        (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
 
       return {
         isPro,
         trial: trialRes.data,
         isTrialFinished,
         userId: userData.user.id,
+        subscription: subRes.data,
       };
-    }
+    },
   });
 
   // Query active provider
@@ -70,13 +81,13 @@ function DashboardPage() {
       if (!activeProvider?.provider) return 0;
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) return 0;
-      
+
       const { count, error } = await supabase
         .from("searches")
         .select("id", { count: "exact", head: true })
         .eq("user_id", userData.user.id)
         .eq("provider", activeProvider.provider);
-        
+
       if (error) throw error;
       return count ?? 0;
     },
@@ -86,15 +97,28 @@ function DashboardPage() {
   const { data } = useQuery({
     queryKey: ["dashboard-kpis-and-searches"],
     queryFn: async () => {
-      const [total, noSite, contacted, clients, favorites, searchesCount, recentSearches] = await Promise.all([
-        supabase.from("companies").select("id", { count: "exact", head: true }),
-        supabase.from("companies").select("id", { count: "exact", head: true }).or("website.is.null,website.eq."),
-        supabase.from("companies").select("id", { count: "exact", head: true }).neq("status", "novo"),
-        supabase.from("companies").select("id", { count: "exact", head: true }).eq("status", "cliente"),
-        supabase.from("companies").select("id", { count: "exact", head: true }).eq("favorite", true),
-        supabase.from("searches").select("id", { count: "exact", head: true }),
-        supabase.from("searches").select("*").order("created_at", { ascending: false }).limit(5),
-      ]);
+      const [total, noSite, contacted, clients, favorites, searchesCount, recentSearches] =
+        await Promise.all([
+          supabase.from("companies").select("id", { count: "exact", head: true }),
+          supabase
+            .from("companies")
+            .select("id", { count: "exact", head: true })
+            .or("website.is.null,website.eq."),
+          supabase
+            .from("companies")
+            .select("id", { count: "exact", head: true })
+            .neq("status", "novo"),
+          supabase
+            .from("companies")
+            .select("id", { count: "exact", head: true })
+            .eq("status", "cliente"),
+          supabase
+            .from("companies")
+            .select("id", { count: "exact", head: true })
+            .eq("favorite", true),
+          supabase.from("searches").select("id", { count: "exact", head: true }),
+          supabase.from("searches").select("*").order("created_at", { ascending: false }).limit(5),
+        ]);
 
       return {
         total: total.count ?? 0,
@@ -124,6 +148,8 @@ function DashboardPage() {
     });
   };
 
+  console.log("DEBUG subData:", subData);
+
   return (
     <AppShell title="Dashboard" description="Visão geral da sua prospecção">
       <div className="space-y-6">
@@ -131,60 +157,93 @@ function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-3">
           {/* Trial / Subscription Status Card */}
           {subData && (
-            <Card className={`overflow-hidden border relative bg-card/60 md:col-span-2 ${
-              subData.isPro 
-                ? "border-primary/30 bg-gradient-to-r from-primary/5 via-transparent to-transparent" 
-                : subData.isTrialFinished 
-                  ? "border-amber-500/20 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent" 
-                  : "border-slate-800"
-            }`}>
+            <Card
+              className={`overflow-hidden border relative bg-card/60 md:col-span-2 ${
+                subData.isPro
+                  ? "border-primary/30 bg-gradient-to-r from-primary/5 via-transparent to-transparent"
+                  : subData.isTrialFinished
+                    ? "border-amber-500/20 bg-gradient-to-r from-amber-500/5 via-transparent to-transparent"
+                    : "border-slate-800"
+              }`}
+            >
               <CardContent className="p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 h-full">
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center gap-2">
                     {subData.isPro ? (
                       <Badge className="bg-primary/20 text-primary border-primary/30 text-xs font-semibold px-2.5 py-0.5 uppercase">
-                        ✨ LeadFinder Pro Active
+                        ✨ LeadFinder Pro Ativo
                       </Badge>
                     ) : subData.isTrialFinished ? (
-                      <Badge variant="outline" className="border-amber-500/30 text-amber-400 bg-amber-500/5 text-xs font-semibold px-2.5 py-0.5 uppercase">
-                        🔒 Trial Expired
+                      <Badge
+                        variant="outline"
+                        className="border-amber-500/30 text-amber-400 bg-amber-500/5 text-xs font-semibold px-2.5 py-0.5 uppercase"
+                      >
+                        🔒 Teste Expirado
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="border-yellow-500/30 text-yellow-400 bg-yellow-500/5 text-xs font-semibold px-2.5 py-0.5 uppercase">
-                        🟡 Free Trial
+                      <Badge
+                        variant="outline"
+                        className="border-yellow-500/30 text-yellow-400 bg-yellow-500/5 text-xs font-semibold px-2.5 py-0.5 uppercase"
+                      >
+                        🟡 Teste Grátis
                       </Badge>
                     )}
                   </div>
-                  
+
                   {subData.isPro ? (
                     <div>
-                      <h3 className="text-sm font-bold text-slate-100">Unlimited Searches & CRM Active</h3>
+                      <h3 className="text-sm font-bold text-slate-100">
+                        Buscas Ilimitadas & CRM Ativos
+                      </h3>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
-                        Sua conta possui acesso ilimitado a todas as buscas, filtros avançados por CEP, coordenadas e CRM.
+                        Sua conta possui acesso ilimitado a todas as buscas, filtros avançados por
+                        CEP, coordenadas e CRM.
                       </p>
+                      {subData.subscription?.current_period_end && (
+                        <p className="text-[11px] text-emerald-400 font-medium mt-2 flex items-center gap-1">
+                          <span>📅 Assinatura renova em:</span>
+                          <span className="font-mono">
+                            {new Date(subData.subscription.current_period_end).toLocaleDateString(
+                              "pt-BR",
+                            )}
+                          </span>
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-3">
                       <div>
                         <h3 className="text-sm font-bold text-slate-100">
-                          {subData.isTrialFinished ? "Seu período de teste grátis expirou" : "1 Search Included"}
+                          {subData.isTrialFinished
+                            ? "Seu período de teste grátis expirou"
+                            : "1 Pesquisa Inclusa"}
                         </h3>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                          {subData.isTrialFinished 
-                            ? "Faça o upgrade para o LeadFinder Pro para desbloquear buscas ilimitadas." 
+                          {subData.isTrialFinished
+                            ? "Faça o upgrade para o LeadFinder Pro para desbloquear buscas ilimitadas."
                             : "Cada pesquisa no trial libera a visualização dos 20 primeiros leads."}
                         </p>
+                        {subData.subscription?.current_period_end && (
+                          <p className="text-[11px] text-rose-400 font-medium mt-2 flex items-center gap-1">
+                            <span>❌ Assinatura expirou em:</span>
+                            <span className="font-mono">
+                              {new Date(subData.subscription.current_period_end).toLocaleDateString(
+                                "pt-BR",
+                              )}
+                            </span>
+                          </p>
+                        )}
                       </div>
 
                       {/* Progress Bar & Counters */}
                       <div className="space-y-1.5 max-w-md">
                         <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
-                          <span>Searches Used: {subData.trial?.searches_used ?? 0} / 1</span>
-                          <span>Results Available: 20 / Total</span>
+                          <span>Buscas Utilizadas: {subData.trial?.searches_used ?? 0} / 1</span>
+                          <span>Resultados Disponíveis: 20 / Total</span>
                         </div>
                         <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-border/20">
-                          <div 
-                            className={`h-full transition-all duration-500 ${subData.isTrialFinished ? "bg-amber-500" : "bg-yellow-500"}`} 
+                          <div
+                            className={`h-full transition-all duration-500 ${subData.isTrialFinished ? "bg-amber-500" : "bg-yellow-500"}`}
                             style={{ width: subData.isTrialFinished ? "100%" : "0%" }}
                           />
                         </div>
@@ -194,11 +253,11 @@ function DashboardPage() {
                 </div>
 
                 {!subData.isPro && (
-                  <Button 
+                  <Button
                     onClick={() => navigate({ to: "/pricing" })}
                     className="bg-primary hover:bg-primary/95 text-white font-semibold text-xs h-10 px-5 shadow-lg shadow-primary/20 shrink-0 w-full md:w-auto"
                   >
-                    Upgrade to Pro
+                    {subData.subscription ? "Renovar Assinatura" : "Upgrade para Pro"}
                   </Button>
                 )}
               </CardContent>
@@ -209,7 +268,9 @@ function DashboardPage() {
           <Card className="border-border/60 bg-card/60 overflow-hidden relative flex flex-col justify-between">
             <div className="absolute -right-8 -top-8 size-20 bg-primary/10 rounded-full blur-xl" />
             <CardHeader className="pb-2">
-              <span className="text-[10px] text-muted-foreground font-mono block">PROVIDER ATIVO</span>
+              <span className="text-[10px] text-muted-foreground font-mono block">
+                PROVIDER ATIVO
+              </span>
               <div className="flex items-center gap-2 mt-1">
                 <div className="grid size-9 place-items-center rounded-lg bg-primary/10 text-primary border border-primary/20">
                   <Cpu className="size-4.5 text-primary" />
@@ -218,7 +279,10 @@ function DashboardPage() {
                   <CardTitle className="text-sm font-bold text-slate-100">
                     {activeProvider?.display_name || "OpenStreetMap"}
                   </CardTitle>
-                  <Badge variant="outline" className="text-[9px] mt-0.5 border-primary/20 bg-primary/5 text-primary px-1.5 py-px">
+                  <Badge
+                    variant="outline"
+                    className="text-[9px] mt-0.5 border-primary/20 bg-primary/5 text-primary px-1.5 py-px"
+                  >
                     Active
                   </Badge>
                 </div>
@@ -227,11 +291,13 @@ function DashboardPage() {
             <CardContent className="pt-2 space-y-4 flex-1 flex flex-col justify-between">
               <div className="flex justify-between items-center text-xs pt-2">
                 <span className="text-muted-foreground">Pesquisas realizadas:</span>
-                <span className="font-semibold text-slate-100 tabular-nums">{activeProviderSearchesCount}</span>
+                <span className="font-semibold text-slate-100 tabular-nums">
+                  {activeProviderSearchesCount}
+                </span>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="w-full text-xs font-semibold h-8 mt-2"
                 onClick={() => navigate({ to: "/settings", search: { tab: "providers" } })}
               >
@@ -246,7 +312,9 @@ function DashboardPage() {
           {kpis.map((k) => (
             <Card key={k.label} className="border-border/60 bg-card/60">
               <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">{k.label}</CardTitle>
+                <CardTitle className="text-xs font-medium text-muted-foreground">
+                  {k.label}
+                </CardTitle>
                 <div className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
                   <k.icon className="size-4" />
                 </div>
@@ -267,8 +335,10 @@ function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-2">
-            {(!data?.recentSearches || data.recentSearches.length === 0) ? (
-              <p className="text-xs text-muted-foreground text-center py-6">Nenhuma pesquisa realizada ainda.</p>
+            {!data?.recentSearches || data.recentSearches.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-6">
+                Nenhuma pesquisa realizada ainda.
+              </p>
             ) : (
               <div className="divide-y divide-border/20">
                 {data.recentSearches.map((s) => {
@@ -277,7 +347,7 @@ function DashboardPage() {
                     month: "2-digit",
                     year: "numeric",
                     hour: "2-digit",
-                    minute: "2-digit"
+                    minute: "2-digit",
                   });
 
                   return (
@@ -290,7 +360,10 @@ function DashboardPage() {
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-slate-200">{s.keyword}</span>
                           {s.cep && (
-                            <Badge variant="outline" className="text-[9px] px-1 py-0 border-primary/20 text-primary bg-primary/5">
+                            <Badge
+                              variant="outline"
+                              className="text-[9px] px-1 py-0 border-primary/20 text-primary bg-primary/5"
+                            >
                               CEP {s.cep}
                             </Badge>
                           )}
@@ -300,7 +373,9 @@ function DashboardPage() {
                           {s.city && <span>·</span>}
                           <span>Raio: {s.radius_km} km</span>
                           <span>·</span>
-                          <span className="text-emerald-400 font-medium">{s.result_count} empresas encontradas</span>
+                          <span className="text-emerald-400 font-medium">
+                            {s.result_count} empresas encontradas
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-shrink-0">

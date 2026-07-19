@@ -2,21 +2,21 @@ import { createFileRoute, useNavigate, useRouterState } from "@tanstack/react-ro
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { 
-  Check, 
-  ShieldCheck, 
-  Lock, 
-  Key, 
-  Cpu, 
-  User, 
-  CreditCard, 
-  Sparkles, 
-  AlertCircle, 
-  Loader2, 
+import {
+  Check,
+  ShieldCheck,
+  Lock,
+  Key,
+  Cpu,
+  User,
+  CreditCard,
+  Sparkles,
+  AlertCircle,
+  Loader2,
   ExternalLink,
   Save,
   Activity,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,7 +24,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -72,7 +78,8 @@ const PROVIDERS_LIST: ProviderDetails[] = [
   {
     key: "serpapi",
     name: "SerpAPI",
-    description: "Use a SerpAPI para pesquisar no Google Maps e obter leads detalhados de empresas em tempo real.",
+    description:
+      "Use a SerpAPI para pesquisar no Google Maps e obter leads detalhados de empresas em tempo real.",
     isPremium: true,
     isFree: false,
     isRecommended: true,
@@ -90,7 +97,8 @@ const PROVIDERS_LIST: ProviderDetails[] = [
   {
     key: "google_places",
     name: "Google Places API",
-    description: "Use a sua própria chave da API Google Places para fazer buscas de locais em tempo real.",
+    description:
+      "Use a sua própria chave da API Google Places para fazer buscas de locais em tempo real.",
     isPremium: true,
     isFree: false,
     isRecommended: false,
@@ -99,7 +107,8 @@ const PROVIDERS_LIST: ProviderDetails[] = [
   {
     key: "outscraper",
     name: "Outscraper",
-    description: "Recomendado para agências e geração de leads em massa com enriquecimento de e-mails.",
+    description:
+      "Recomendado para agências e geração de leads em massa com enriquecimento de e-mails.",
     isPremium: true,
     isFree: false,
     isRecommended: true,
@@ -138,7 +147,7 @@ function SettingsPage() {
         .eq("id", userData.user.id)
         .single();
       return data;
-    }
+    },
   });
 
   // Fetch user role
@@ -154,7 +163,7 @@ function SettingsPage() {
         .eq("role", "admin")
         .maybeSingle();
       return { isAdmin: !!data };
-    }
+    },
   });
 
   // Fetch subscription
@@ -162,18 +171,19 @@ function SettingsPage() {
     queryKey: ["user-subscription-status"],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return { isPro: false, trial: null };
-      
+      if (!userData.user) return { isPro: false, trial: null, subscription: null };
+
       const [subRes, trialRes] = await Promise.all([
         supabase.from("subscriptions").select("*").eq("user_id", userData.user.id).maybeSingle(),
-        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle()
+        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle(),
       ]);
 
       return {
         isPro: subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com",
         trial: trialRes.data,
+        subscription: subRes.data,
       };
-    }
+    },
   });
 
   // Fetch configured providers
@@ -187,7 +197,7 @@ function SettingsPage() {
         .select("*")
         .eq("user_id", userData.user.id);
       return data || [];
-    }
+    },
   });
 
   // Update profile mutation
@@ -229,17 +239,20 @@ function SettingsPage() {
           .insert({
             user_id: userData.user.id,
             provider,
-            display_name: PROVIDERS_LIST.find(p => p.key === provider)?.name || provider,
+            display_name: PROVIDERS_LIST.find((p) => p.key === provider)?.name || provider,
             active: false,
           })
           .select("id")
           .single();
         if (insErr) throw insErr;
-        
+
         // Atualizar para ativo (o trigger BEFORE UPDATE desativa os outros)
         const { error: actErr } = await supabase
           .from("api_providers")
-          .update({ active: true, connection_status: provider === "openstreetmap" ? "connected" : "inactive" })
+          .update({
+            active: true,
+            connection_status: provider === "openstreetmap" ? "connected" : "inactive",
+          })
           .eq("id", inserted.id);
         if (actErr) throw actErr;
       } else {
@@ -279,7 +292,8 @@ function SettingsPage() {
           .insert({
             user_id: userData.user.id,
             provider: payload.provider,
-            display_name: PROVIDERS_LIST.find(p => p.key === payload.provider)?.name || payload.provider,
+            display_name:
+              PROVIDERS_LIST.find((p) => p.key === payload.provider)?.name || payload.provider,
             active: false,
           })
           .select("id")
@@ -291,12 +305,13 @@ function SettingsPage() {
       }
 
       // 2. Salvar/Upsert a chave na tabela protegida api_provider_keys
-      const { error: keyErr } = await supabase
-        .from("api_provider_keys")
-        .upsert({
+      const { error: keyErr } = await supabase.from("api_provider_keys").upsert(
+        {
           provider_id: providerId,
           api_key: payload.apiKey,
-        }, { onConflict: "provider_id" });
+        },
+        { onConflict: "provider_id" },
+      );
 
       if (keyErr) throw keyErr;
 
@@ -323,15 +338,15 @@ function SettingsPage() {
     try {
       const res = await SearchProviderService.testConnection(provider);
       setTestResult(res);
-      
+
       // Atualizar o status de conexão no banco
-      const provRow = providers.find(p => p.provider === provider);
+      const provRow = providers.find((p) => p.provider === provider);
       if (provRow) {
         await supabase
           .from("api_providers")
-          .update({ 
+          .update({
             connection_status: res.success ? "connected" : "error",
-            last_connection_test: new Date().toISOString()
+            last_connection_test: new Date().toISOString(),
           })
           .eq("id", provRow.id);
         refetchProviders();
@@ -355,9 +370,9 @@ function SettingsPage() {
         {/* Navigation Tabs */}
         <div className="flex gap-1 border-b border-border/60 pb-px overflow-x-auto">
           {[
-            { id: "profile", label: "Profile", icon: User },
-            { id: "billing", label: "Billing", icon: CreditCard },
-            { id: "providers", label: "API Providers", icon: Cpu },
+            { id: "profile", label: "Perfil", icon: User },
+            { id: "billing", label: "Planos", icon: CreditCard },
+            { id: "providers", label: "Provedores", icon: Cpu },
           ].map((t) => (
             <Button
               key={t.id}
@@ -401,19 +416,40 @@ function SettingsPage() {
                   className="space-y-4"
                 >
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground font-medium">Nome Completo</label>
-                    <Input name="fullName" defaultValue={profile?.full_name || ""} placeholder="Seu nome" required />
+                    <label className="text-xs text-muted-foreground font-medium">
+                      Nome Completo
+                    </label>
+                    <Input
+                      name="fullName"
+                      defaultValue={profile?.full_name || ""}
+                      placeholder="Seu nome"
+                      required
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground font-medium">E-mail (Não editável)</label>
-                    <Input value={profile?.email || ""} disabled className="bg-slate-900/60 text-slate-400" />
+                    <label className="text-xs text-muted-foreground font-medium">
+                      E-mail (Não editável)
+                    </label>
+                    <Input
+                      value={profile?.email || ""}
+                      disabled
+                      className="bg-slate-900/60 text-slate-400"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground font-medium">Telefone de Contato</label>
-                    <Input name="phone" defaultValue={profile?.phone || ""} placeholder="Ex: (11) 99999-9999" />
+                    <label className="text-xs text-muted-foreground font-medium">
+                      Telefone de Contato
+                    </label>
+                    <Input
+                      name="phone"
+                      defaultValue={profile?.phone || ""}
+                      placeholder="Ex: (11) 99999-9999"
+                    />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs text-muted-foreground font-medium">Função na Plataforma</label>
+                    <label className="text-xs text-muted-foreground font-medium">
+                      Função na Plataforma
+                    </label>
                     <div className="flex items-center gap-2 mt-1">
                       {roleData?.isAdmin ? (
                         <Badge className="bg-primary/20 text-primary border-primary/30 text-xs font-semibold px-2 py-0.5">
@@ -427,7 +463,12 @@ function SettingsPage() {
                     </div>
                   </div>
 
-                  <Button type="submit" size="sm" className="text-xs font-semibold h-9" disabled={updateProfileMutation.isPending}>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="text-xs font-semibold h-9"
+                    disabled={updateProfileMutation.isPending}
+                  >
                     {updateProfileMutation.isPending ? (
                       <Loader2 className="mr-2 size-3 animate-spin" />
                     ) : (
@@ -442,44 +483,95 @@ function SettingsPage() {
         )}
 
         {activeTab === "billing" && (
-          <div className="space-y-6 max-w-xl">
-            <Card className="border-border/60 bg-card/60">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl">
+            {/* Left Card: Plan Details */}
+            <Card className="border-border/60 bg-card/60 md:col-span-2">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                  <CreditCard className="size-4 text-primary" /> Faturamento e Assinatura
+                  <CreditCard className="size-4 text-primary" /> Detalhes do Plano
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Gerencie sua licença LeadFinder Pro.
+                  Licença e benefícios inclusos no seu nível atual.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="p-4 rounded-xl border border-border/40 bg-slate-900/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div className="p-4 rounded-xl border border-border/40 bg-slate-900/30 flex flex-col items-start gap-2">
                   <div className="space-y-1">
-                    <span className="text-[10px] text-muted-foreground font-mono block">PLANO ATUAL</span>
-                    <h3 className="text-sm font-bold text-slate-100">
-                      {subData?.isPro ? "✨ LeadFinder Pro Active" : "🟡 Free Trial"}
+                    <span className="text-[10px] text-muted-foreground font-mono block">
+                      PLANO ATUAL
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-100 flex items-center gap-1.5">
+                      {subData?.isPro ? "✨ LeadFinder Pro Ativo" : "🟡 Teste Grátis"}
                     </h3>
-                    <p className="text-[11px] text-muted-foreground">
-                      {subData?.isPro 
-                        ? "Acesso ilimitado e completo a pesquisas e leads." 
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {subData?.isPro
+                        ? "Acesso ilimitado e completo a pesquisas e leads."
                         : "Você possui 1 pesquisa gratuita liberando até 20 resultados."}
                     </p>
                   </div>
-                  {!subData?.isPro && (
-                    <Button size="sm" onClick={() => navigate({ to: "/pricing" })} className="bg-primary hover:bg-primary/95 text-xs font-semibold h-9">
-                      Upgrade to Pro (US$25/month)
-                    </Button>
-                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-slate-300">Recursos inclusos no Pro:</h4>
-                  <ul className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
-                    <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Buscas de Leads Ilimitadas</li>
-                    <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Resultados limpos (sem Blur)</li>
-                    <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> CRM integrado ilimitado</li>
-                    <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Filtros por CEP estruturado</li>
+                  <h4 className="text-xs font-semibold text-slate-300">
+                    Recursos inclusos no Pro:
+                  </h4>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px] text-slate-300">
+                    <li className="flex items-center gap-1.5">
+                      <Check className="size-3 text-emerald-400" /> Buscas de Leads Ilimitadas
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check className="size-3 text-emerald-400" /> Resultados limpos (sem Blur)
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check className="size-3 text-emerald-400" /> CRM integrado ilimitado
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      <Check className="size-3 text-emerald-400" /> Filtros por CEP estruturado
+                    </li>
                   </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Right Card: Subscription Status */}
+            <Card className="border-border/60 bg-card/60 h-fit">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <Activity className="size-4 text-primary" /> Status da Assinatura
+                </CardTitle>
+                <CardDescription className="text-xs">Validade e ações rápidas.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted-foreground font-mono block">
+                    VENCIMENTO
+                  </span>
+                  {subData?.subscription?.current_period_end ? (
+                    <p className="text-sm font-semibold text-slate-200">
+                      {subData.isPro ? "Renova em:" : "Expirou em:"}{" "}
+                      <span className="font-mono text-primary">
+                        {new Date(subData.subscription.current_period_end).toLocaleDateString(
+                          "pt-BR",
+                        )}
+                      </span>
+                    </p>
+                  ) : (
+                    <p className="text-sm font-semibold text-slate-200">Sem vencimento ativo</p>
+                  )}
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    onClick={() => navigate({ to: "/pricing" })}
+                    className="w-full bg-primary hover:bg-primary/95 text-xs font-semibold h-9"
+                  >
+                    {subData?.isPro
+                      ? "Alterar Plano"
+                      : subData?.subscription
+                        ? "Renovar Agora"
+                        : "Adquirir Pro"}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -495,15 +587,17 @@ function SettingsPage() {
                   ⚙️ Integração com a SerpAPI
                 </h4>
                 <p className="text-xs md:text-sm text-slate-300">
-                  Para realizar buscas no Google Maps, você pode utilizar a SerpAPI. Certifique-se de configurar e possuir saldo ou plano ativo na sua conta SerpAPI para liberar as pesquisas.
+                  Para realizar buscas no Google Maps, você pode utilizar a SerpAPI. Certifique-se
+                  de configurar e possuir saldo ou plano ativo na sua conta SerpAPI para liberar as
+                  pesquisas.
                 </p>
               </div>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 onClick={() => {
-                  const serpApi = PROVIDERS_LIST.find(p => p.key === "serpapi");
+                  const serpApi = PROVIDERS_LIST.find((p) => p.key === "serpapi");
                   if (serpApi) openConfigure(serpApi);
-                }} 
+                }}
                 className="bg-primary hover:bg-primary/95 text-xs md:text-sm font-semibold h-9 px-4 shrink-0"
               >
                 Conectar SerpAPI
@@ -515,7 +609,9 @@ function SettingsPage() {
               <div>
                 <h3 className="text-lg font-bold text-slate-100">Configuração de Provedores</h3>
                 <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                  Conecte suas próprias APIs para realizar buscas de leads. As chaves de API são armazenadas com criptografia rígida de ponta a ponta no banco de dados e nunca são enviadas ao navegador.
+                  Conecte suas próprias APIs para realizar buscas de leads. As chaves de API são
+                  armazenadas com criptografia rígida de ponta a ponta no banco de dados e nunca são
+                  enviadas ao navegador.
                 </p>
               </div>
 
@@ -523,7 +619,8 @@ function SettingsPage() {
                 {PROVIDERS_LIST.map((p) => {
                   const dbRecord = providers.find((db) => db.provider === p.key);
                   const isConfigured = dbRecord?.has_key_configured || p.key === "openstreetmap";
-                  const isActive = dbRecord?.active || (providers.length === 0 && p.key === "openstreetmap");
+                  const isActive =
+                    dbRecord?.active || (providers.length === 0 && p.key === "openstreetmap");
                   const isSerpApi = p.key === "serpapi";
 
                   // Badges configuration
@@ -538,13 +635,13 @@ function SettingsPage() {
                   }
 
                   return (
-                    <Card 
-                      key={p.key} 
+                    <Card
+                      key={p.key}
                       className={`border relative bg-card/60 flex flex-col justify-between overflow-hidden transition-all duration-300 hover:-translate-y-1.5 h-full ${
-                        isSerpApi 
-                          ? "border-primary/50 shadow-md ring-1 ring-primary/20" 
-                          : isActive 
-                            ? "border-primary/30 bg-primary/5 hover:shadow-lg" 
+                        isSerpApi
+                          ? "border-primary/50 shadow-md ring-1 ring-primary/20"
+                          : isActive
+                            ? "border-primary/30 bg-primary/5 hover:shadow-lg"
                             : "border-border/60 hover:shadow-lg"
                       }`}
                     >
@@ -557,10 +654,15 @@ function SettingsPage() {
                       <CardHeader className="pb-3 flex-1 flex flex-col justify-start">
                         <div className="flex items-start justify-between">
                           <div className="grid size-10 place-items-center rounded-xl bg-slate-900 border border-slate-800">
-                            <Cpu className={`size-5 ${isActive ? "text-primary animate-pulse" : "text-muted-foreground"}`} />
+                            <Cpu
+                              className={`size-5 ${isActive ? "text-primary animate-pulse" : "text-muted-foreground"}`}
+                            />
                           </div>
                           <div className="flex flex-col items-end gap-1">
-                            <Badge variant="outline" className={`text-[10px] font-semibold ${statusBadge}`}>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] font-semibold ${statusBadge}`}
+                            >
                               {statusText}
                             </Badge>
                             <div className="flex gap-1 flex-wrap justify-end max-w-[150px]">
@@ -577,7 +679,11 @@ function SettingsPage() {
                                         </Badge>
                                       </TooltipTrigger>
                                       <TooltipContent className="bg-slate-900 border border-slate-800 text-[11px] text-slate-200 p-2.5 max-w-xs shadow-xl">
-                                        <p>A SerpAPI requer uma conta ativa com saldo ou plano contratado para executar as buscas de locais e retornar leads.</p>
+                                        <p>
+                                          A SerpAPI requer uma conta ativa com saldo ou plano
+                                          contratado para executar as buscas de locais e retornar
+                                          leads.
+                                        </p>
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
@@ -587,15 +693,29 @@ function SettingsPage() {
                                 </>
                               ) : (
                                 <>
-                                  {p.isFree && <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px]">Grátis</Badge>}
-                                  {p.isPremium && <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">Premium</Badge>}
-                                  {p.isRecommended && <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">Recomendado</Badge>}
+                                  {p.isFree && (
+                                    <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px]">
+                                      Grátis
+                                    </Badge>
+                                  )}
+                                  {p.isPremium && (
+                                    <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">
+                                      Premium
+                                    </Badge>
+                                  )}
+                                  {p.isRecommended && (
+                                    <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px]">
+                                      Recomendado
+                                    </Badge>
+                                  )}
                                 </>
                               )}
                             </div>
                           </div>
                         </div>
-                        <CardTitle className="text-base font-bold text-slate-100 mt-3">{p.name}</CardTitle>
+                        <CardTitle className="text-base font-bold text-slate-100 mt-3">
+                          {p.name}
+                        </CardTitle>
                         {isSerpApi && (
                           <p className="text-xs text-amber-400/90 font-medium leading-normal mt-1">
                             Nota: Requer saldo ou plano ativo na SerpAPI para liberar pesquisas.
@@ -608,18 +728,18 @@ function SettingsPage() {
                       <CardContent className="pt-3 border-t border-border/20 flex flex-col gap-2">
                         {p.key !== "openstreetmap" && (
                           <div className="flex gap-1">
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="flex-1 text-xs h-9 font-semibold" 
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 text-xs h-9 font-semibold"
                               onClick={() => openConfigure(p)}
                             >
                               {isSerpApi ? "Conectar SerpAPI" : "Configurar"}
                             </Button>
                             {isConfigured && (
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 className="text-xs h-9 font-semibold text-amber-400 hover:text-amber-300"
                                 onClick={() => handleTestConnection(p.key)}
                               >
@@ -628,13 +748,17 @@ function SettingsPage() {
                             )}
                           </div>
                         )}
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           disabled={isActive || (!isConfigured && p.key !== "openstreetmap")}
                           className="w-full text-xs h-9 font-bold"
                           onClick={() => activateProviderMutation.mutate(p.key)}
                         >
-                          {isActive ? (isSerpApi ? "✅ Conectado e Ativo" : "Ativo no Momento") : "Ativar"}
+                          {isActive
+                            ? isSerpApi
+                              ? "✅ Conectado e Ativo"
+                              : "Ativo no Momento"
+                            : "Ativar"}
                         </Button>
                       </CardContent>
                     </Card>
@@ -648,7 +772,8 @@ function SettingsPage() {
               <div>
                 <h3 className="text-lg font-bold text-slate-100">Marketplace & Comparação</h3>
                 <p className="text-xs md:text-sm text-muted-foreground mt-1">
-                  Analise os prós e contras de cada API e selecione o provedor ideal para a sua estratégia de vendas.
+                  Analise os prós e contras de cada API e selecione o provedor ideal para a sua
+                  estratégia de vendas.
                 </p>
               </div>
 
@@ -669,19 +794,70 @@ function SettingsPage() {
                     </TableHeader>
                     <TableBody>
                       {[
-                        { name: "SerpAPI", pricing: "Pago / Planos ou Saldo", data: "⭐⭐⭐⭐", phone: "Sim", web: "Sim", email: "Não", rating: "Sim", rec: "⭐⭐⭐⭐ Recomendado" },
-                        { name: "OpenStreetMap", pricing: "Gratuito", data: "⭐⭐", phone: "Parcial", web: "Parcial", email: "Não", rating: "Não", rec: "⭐⭐ Básico" },
-                        { name: "Google Places API", pricing: "$$$$ (Tarifas Google)", data: "⭐⭐⭐⭐⭐", phone: "Sim", web: "Sim", email: "Não", rating: "Sim", rec: "⭐⭐⭐⭐ Empresas" },
-                        { name: "Outscraper", pricing: "$$ (Custo baixo)", data: "⭐⭐⭐⭐⭐", phone: "Sim", web: "Sim", email: "Sim (Extração)", rating: "Sim", rec: "⭐⭐⭐⭐ Agências" },
-                        { name: "Apify", pricing: "$$ (Créditos)", data: "⭐⭐⭐⭐", phone: "Sim", web: "Sim", email: "Sim (Raspagem)", rating: "Sim", rec: "⭐⭐⭐ Usuários Avançados" },
+                        {
+                          name: "SerpAPI",
+                          pricing: "Pago / Planos ou Saldo",
+                          data: "⭐⭐⭐⭐",
+                          phone: "Sim",
+                          web: "Sim",
+                          email: "Não",
+                          rating: "Sim",
+                          rec: "⭐⭐⭐⭐ Recomendado",
+                        },
+                        {
+                          name: "OpenStreetMap",
+                          pricing: "Gratuito",
+                          data: "⭐⭐",
+                          phone: "Parcial",
+                          web: "Parcial",
+                          email: "Não",
+                          rating: "Não",
+                          rec: "⭐⭐ Básico",
+                        },
+                        {
+                          name: "Google Places API",
+                          pricing: "$$$$ (Tarifas Google)",
+                          data: "⭐⭐⭐⭐⭐",
+                          phone: "Sim",
+                          web: "Sim",
+                          email: "Não",
+                          rating: "Sim",
+                          rec: "⭐⭐⭐⭐ Empresas",
+                        },
+                        {
+                          name: "Outscraper",
+                          pricing: "$$ (Custo baixo)",
+                          data: "⭐⭐⭐⭐⭐",
+                          phone: "Sim",
+                          web: "Sim",
+                          email: "Sim (Extração)",
+                          rating: "Sim",
+                          rec: "⭐⭐⭐⭐ Agências",
+                        },
+                        {
+                          name: "Apify",
+                          pricing: "$$ (Créditos)",
+                          data: "⭐⭐⭐⭐",
+                          phone: "Sim",
+                          web: "Sim",
+                          email: "Sim (Raspagem)",
+                          rating: "Sim",
+                          rec: "⭐⭐⭐ Usuários Avançados",
+                        },
                       ].map((item) => (
                         <TableRow key={item.name}>
                           <TableCell className="font-bold text-slate-200">{item.name}</TableCell>
-                          <TableCell className="font-mono text-muted-foreground">{item.pricing}</TableCell>
+                          <TableCell className="font-mono text-muted-foreground">
+                            {item.pricing}
+                          </TableCell>
                           <TableCell className="text-amber-400 tabular-nums">{item.data}</TableCell>
                           <TableCell className="text-slate-300">{item.phone}</TableCell>
                           <TableCell className="text-slate-300">{item.web}</TableCell>
-                          <TableCell className={`font-semibold ${item.email.startsWith("Sim") ? "text-emerald-400" : "text-muted-foreground"}`}>{item.email}</TableCell>
+                          <TableCell
+                            className={`font-semibold ${item.email.startsWith("Sim") ? "text-emerald-400" : "text-muted-foreground"}`}
+                          >
+                            {item.email}
+                          </TableCell>
                           <TableCell className="text-slate-300">{item.rating}</TableCell>
                           <TableCell className="font-semibold text-slate-100">{item.rec}</TableCell>
                         </TableRow>
@@ -708,7 +884,9 @@ function SettingsPage() {
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-300 font-semibold">Chave de API (API Key / Token)</label>
+              <label className="text-xs text-slate-300 font-semibold">
+                Chave de API (API Key / Token)
+              </label>
               <Input
                 type="password"
                 placeholder="Insira a chave da sua API"
@@ -718,11 +896,13 @@ function SettingsPage() {
             </div>
 
             {testResult && (
-              <div className={`p-3 rounded-lg border text-xs font-semibold flex items-center gap-2 ${
-                testResult.success 
-                  ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400" 
-                  : "border-rose-500/20 bg-rose-500/5 text-rose-400"
-              }`}>
+              <div
+                className={`p-3 rounded-lg border text-xs font-semibold flex items-center gap-2 ${
+                  testResult.success
+                    ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
+                    : "border-rose-500/20 bg-rose-500/5 text-rose-400"
+                }`}
+              >
                 {testResult.success ? (
                   <>
                     <ShieldCheck className="size-4" /> ✅ Connection Successful
@@ -736,12 +916,17 @@ function SettingsPage() {
             )}
 
             <div className="flex gap-2 justify-end">
-              <Button variant="ghost" size="sm" onClick={() => setConfigureProvider(null)} className="text-xs">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfigureProvider(null)}
+                className="text-xs"
+              >
                 Cancelar
               </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 className="text-xs text-amber-400 border-amber-500/20 hover:bg-amber-500/10"
                 disabled={!apiKeyInput.trim() || testingConnection}
                 onClick={() => handleTestConnection(configureProvider!.key)}
@@ -749,21 +934,30 @@ function SettingsPage() {
                 {testingConnection ? <Loader2 className="size-3 animate-spin mr-1.5" /> : null}
                 Test Connection
               </Button>
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 className="text-xs font-semibold"
                 disabled={!apiKeyInput.trim() || saveKeyMutation.isPending}
-                onClick={() => saveKeyMutation.mutate({ provider: configureProvider!.key, apiKey: apiKeyInput })}
+                onClick={() =>
+                  saveKeyMutation.mutate({ provider: configureProvider!.key, apiKey: apiKeyInput })
+                }
               >
-                {saveKeyMutation.isPending ? <Loader2 className="size-3 animate-spin mr-1.5" /> : null}
+                {saveKeyMutation.isPending ? (
+                  <Loader2 className="size-3 animate-spin mr-1.5" />
+                ) : null}
                 Save Credentials
               </Button>
             </div>
-            
+
             <Separator />
             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
               <span>Como obter credenciais?</span>
-              <a href={configureProvider?.docUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-1">
+              <a
+                href={configureProvider?.docUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary hover:underline flex items-center gap-1"
+              >
                 Ver Documentação <ExternalLink className="size-2.5" />
               </a>
             </div>

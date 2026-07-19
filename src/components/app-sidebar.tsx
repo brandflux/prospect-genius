@@ -49,23 +49,41 @@ export function AppSidebar() {
         .eq("role", "admin")
         .maybeSingle();
       return !!data;
-    }
+    },
   });
 
   const { data: subData } = useQuery({
     queryKey: ["user-subscription-status"],
     queryFn: async () => {
       const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return { isPro: false };
-      const { data } = await supabase
-        .from("subscriptions")
-        .select("status")
-        .eq("user_id", userData.user.id)
-        .maybeSingle();
+      if (!userData.user)
+        return {
+          isPro: false,
+          trial: null,
+          isTrialFinished: true,
+          userId: null,
+          subscription: null,
+        };
+
+      const [subRes, trialRes] = await Promise.all([
+        supabase.from("subscriptions").select("*").eq("user_id", userData.user.id).maybeSingle(),
+        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle(),
+      ]);
+
+      const isPro =
+        subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com";
+      const isTrialFinished =
+        trialRes.data?.trial_finished ||
+        (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
+
       return {
-        isPro: data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com",
+        isPro,
+        trial: trialRes.data,
+        isTrialFinished,
+        userId: userData.user.id,
+        subscription: subRes.data,
       };
-    }
+    },
   });
 
   const menuItems = [
@@ -132,24 +150,45 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/settings" && activeTab === "profile"}>
-                  <Link to="/settings" search={{ tab: "profile" }} className="flex items-center gap-2">
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/settings" && activeTab === "profile"}
+                >
+                  <Link
+                    to="/settings"
+                    search={{ tab: "profile" }}
+                    className="flex items-center gap-2"
+                  >
                     <User className="size-4" />
-                    {!collapsed && <span>Profile</span>}
+                    {!collapsed && <span>Perfil</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/settings" && activeTab === "billing"}>
-                  <Link to="/settings" search={{ tab: "billing" }} className="flex items-center gap-2">
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/settings" && activeTab === "billing"}
+                >
+                  <Link
+                    to="/settings"
+                    search={{ tab: "billing" }}
+                    className="flex items-center gap-2"
+                  >
                     <CreditCard className="size-4" />
-                    {!collapsed && <span>Billing</span>}
+                    {!collapsed && <span>Planos</span>}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/settings" && activeTab === "providers"}>
-                  <Link to="/settings" search={{ tab: "providers" }} className="flex items-center gap-2">
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === "/settings" && activeTab === "providers"}
+                >
+                  <Link
+                    to="/settings"
+                    search={{ tab: "providers" }}
+                    className="flex items-center gap-2"
+                  >
                     <Cpu className="size-4" />
                     {!collapsed && <span>API Providers</span>}
                   </Link>
@@ -165,8 +204,8 @@ export function AppSidebar() {
             <p className="text-[10px] text-muted-foreground leading-normal">
               Obtenha buscas ilimitadas e remova o blur dos leads.
             </p>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="w-full text-[10px] font-bold h-7 bg-primary hover:bg-primary/95 text-white"
               onClick={() => navigate({ to: "/pricing" })}
             >

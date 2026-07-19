@@ -186,6 +186,7 @@ function SearchPage() {
         trial: trialRes.data,
         isTrialFinished,
         userId: userData.user.id,
+        subscription: subRes.data,
       };
     },
   });
@@ -666,8 +667,8 @@ function SearchPage() {
   const sortedResults = useMemo(() => {
     const data = [...results];
     data.sort((a, b) => {
-      let valA: any = "";
-      let valB: any = "";
+      let valA: string | number = "";
+      let valB: string | number = "";
 
       switch (sortKey) {
         case "distance":
