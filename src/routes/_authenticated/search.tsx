@@ -1,24 +1,24 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import React, { useEffect, useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { 
-  Search as SearchIcon, 
-  Loader2, 
-  MapPin, 
-  Star, 
-  Phone, 
-  MessageCircle, 
-  Globe, 
-  Mail, 
-  History, 
-  ArrowUpDown, 
-  ChevronRight, 
+import {
+  Search as SearchIcon,
+  Loader2,
+  MapPin,
+  Star,
+  Phone,
+  MessageCircle,
+  Globe,
+  Mail,
+  History,
+  ArrowUpDown,
+  ChevronRight,
   Calendar,
   ExternalLink,
   Lock,
   Sparkles,
   Check,
-  AlertCircle
+  AlertCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,13 +54,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  CATEGORY_PRESETS, 
-  overpassSearchAround, 
-  calculateDistance, 
+import {
+  CATEGORY_PRESETS,
+  overpassSearchAround,
+  calculateDistance,
   geocodeAddress,
   geocodeCep,
-  type OsmPoi 
+  type OsmPoi,
 } from "@/lib/overpass";
 import { Map } from "@/components/map";
 import { toast } from "sonner";
@@ -116,7 +116,7 @@ function SearchPage() {
   const [bairro, setBairro] = useState("");
   const [cidade, setCidade] = useState("");
   const [estado, setEstado] = useState("");
-  
+
   // Coordinates state (Default to São Paulo center)
   const [lat, setLat] = useState(-23.55052);
   const [lon, setLon] = useState(-46.633308);
@@ -159,7 +159,7 @@ function SearchPage() {
         .eq("id", userData.user.id)
         .single();
       return data;
-    }
+    },
   });
 
   // Fetch subscription and trial status
@@ -171,11 +171,14 @@ function SearchPage() {
 
       const [subRes, trialRes] = await Promise.all([
         supabase.from("subscriptions").select("*").eq("user_id", userData.user.id).maybeSingle(),
-        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle()
+        supabase.from("trial_usage").select("*").eq("user_id", userData.user.id).maybeSingle(),
       ]);
 
-      const isPro = subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com";
-      const isTrialFinished = trialRes.data?.trial_finished || (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
+      const isPro =
+        subRes.data?.status === "active" || userData.user.email === "brandfluxsm@gmail.com";
+      const isTrialFinished =
+        trialRes.data?.trial_finished ||
+        (trialRes.data?.searches_used && trialRes.data.searches_used >= 1);
 
       return {
         isPro,
@@ -183,7 +186,7 @@ function SearchPage() {
         isTrialFinished,
         userId: userData.user.id,
       };
-    }
+    },
   });
 
   // Query active search provider
@@ -193,7 +196,9 @@ function SearchPage() {
   });
 
   // Sorting state
-  const [sortKey, setSortKey] = useState<"distance" | "name" | "category" | "no-website" | "phone" | "email">("distance");
+  const [sortKey, setSortKey] = useState<
+    "distance" | "name" | "category" | "no-website" | "phone" | "email"
+  >("distance");
   const [sortAsc, setSortAsc] = useState(true);
 
   // Selected company for CRM Drawer
@@ -232,10 +237,7 @@ function SearchPage() {
   // Save changes to company in Supabase
   const updateCompanyMutation = useMutation({
     mutationFn: async (payload: { id: string; patch: Partial<Company> }) => {
-      const { error } = await supabase
-        .from("companies")
-        .update(payload.patch)
-        .eq("id", payload.id);
+      const { error } = await supabase.from("companies").update(payload.patch).eq("id", payload.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -252,7 +254,7 @@ function SearchPage() {
     return CATEGORY_PRESETS.filter(
       (c) =>
         c.label.toLowerCase().includes(categoryInput.toLowerCase()) ||
-        c.value.toLowerCase().includes(categoryInput.toLowerCase())
+        c.value.toLowerCase().includes(categoryInput.toLowerCase()),
     );
   }, [categoryInput]);
 
@@ -291,12 +293,16 @@ function SearchPage() {
               setLon(parseFloat(geo.lon));
             } else {
               // Try with city/state if full address fails
-              const fallbackGeo = await geocodeAddress(`${data.localidade || ""}, ${data.uf || ""}, Brasil`);
+              const fallbackGeo = await geocodeAddress(
+                `${data.localidade || ""}, ${data.uf || ""}, Brasil`,
+              );
               if (fallbackGeo) {
                 setLat(parseFloat(fallbackGeo.lat));
                 setLon(parseFloat(fallbackGeo.lon));
               } else {
-                toast.warning("Não foi possível localizar as coordenadas exatas deste CEP no mapa.");
+                toast.warning(
+                  "Não foi possível localizar as coordenadas exatas deste CEP no mapa.",
+                );
               }
             }
           }
@@ -327,7 +333,7 @@ function SearchPage() {
         // Reverse geocoding to find city/state
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
           );
           if (res.ok) {
             const data = await res.json();
@@ -345,7 +351,7 @@ function SearchPage() {
       (err) => {
         setLoading(false);
         toast.error("Permissão de localização negada ou indisponível.");
-      }
+      },
     );
   };
 
@@ -386,7 +392,9 @@ function SearchPage() {
               setLon(searchLon);
             } else {
               setLoading(false);
-              return toast.error("Não foi possível localizar este endereço no mapa. Verifique a grafia da Cidade e UF.");
+              return toast.error(
+                "Não foi possível localizar este endereço no mapa. Verifique a grafia da Cidade e UF.",
+              );
             }
           }
         } else {
@@ -465,11 +473,11 @@ function SearchPage() {
         if (p.latitude != null && p.longitude != null) {
           dist = calculateDistance(lat, lon, p.latitude, p.longitude);
         }
-        return { 
-          ...p, 
+        return {
+          ...p,
           osm_id: p.provider_reference, // compatibility
           name: p.company_name, // compatibility
-          distanceKm: dist 
+          distanceKm: dist,
         };
       });
 
@@ -477,8 +485,8 @@ function SearchPage() {
       toast.success(`${pois.length} empresas encontradas e salvas.`);
       refetchSearches();
 
-      // Update trial usage if this was the user's first search in trial mode
-      if (subData && !subData.isPro && !subData.isTrialFinished) {
+      // Update trial usage if this was the user's first search in trial mode and we actually found results
+      if (subData && !subData.isPro && !subData.isTrialFinished && pois.length > 0) {
         await supabase
           .from("trial_usage")
           .update({
@@ -541,9 +549,13 @@ function SearchPage() {
           country: c.country,
           latitude: c.latitude,
           longitude: c.longitude,
-          distanceKm: (c.latitude != null && c.longitude != null && hist.latitude != null && hist.longitude != null)
-            ? calculateDistance(hist.latitude, hist.longitude, c.latitude, c.longitude)
-            : 0,
+          distanceKm:
+            c.latitude != null &&
+            c.longitude != null &&
+            hist.latitude != null &&
+            hist.longitude != null
+              ? calculateDistance(hist.latitude, hist.longitude, c.latitude, c.longitude)
+              : 0,
         }));
         setResults(formatted);
         toast.success(`Carregadas ${comps.length} empresas do histórico.`);
@@ -576,7 +588,7 @@ function SearchPage() {
 
         if (error) throw error;
         toast.success("Status de favorito atualizado.");
-        
+
         // If drawer is open, refresh it
         if (selectedCompanyId === record.id) {
           qc.invalidateQueries({ queryKey: ["company-detail", selectedCompanyId] });
@@ -616,10 +628,7 @@ function SearchPage() {
         .maybeSingle();
 
       if (record) {
-        const { error } = await supabase
-          .from("companies")
-          .update({ status })
-          .eq("id", record.id);
+        const { error } = await supabase.from("companies").update({ status }).eq("id", record.id);
 
         if (error) throw error;
         toast.success("Status CRM atualizado.");
@@ -712,8 +721,8 @@ function SearchPage() {
           </div>
           <h2 className="text-xl font-bold text-slate-100">Acesso Pendente de Aprovação</h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Sua conta foi criada com sucesso, mas a funcionalidade de busca de empresas está desativada no momento. 
-            Entre em contato com o administrador para autorizar seu acesso.
+            Sua conta foi criada com sucesso, mas a funcionalidade de busca de empresas está
+            desativada no momento. Entre em contato com o administrador para autorizar seu acesso.
           </p>
           <div className="pt-2 text-xs text-muted-foreground">
             E-mail cadastrado: <span className="font-semibold text-slate-300">{profile.email}</span>
@@ -734,8 +743,8 @@ function SearchPage() {
           <p className="text-xs text-muted-foreground leading-relaxed">
             To start searching businesses you must connect at least one Data Provider.
           </p>
-          <Button 
-            className="text-xs font-semibold mt-2" 
+          <Button
+            className="text-xs font-semibold mt-2"
             onClick={() => navigate({ to: "/settings", search: { tab: "providers" } })}
           >
             Configure Providers
@@ -746,7 +755,14 @@ function SearchPage() {
   }
 
   return (
-    <AppShell title="Buscar Empresas" description={activeProvider ? `Fonte de dados: ${activeProvider.display_name}` : "Fonte de dados: OpenStreetMap + Overpass API"}>
+    <AppShell
+      title="Buscar Empresas"
+      description={
+        activeProvider
+          ? `Fonte de dados: ${activeProvider.display_name}`
+          : "Fonte de dados: OpenStreetMap + Overpass API"
+      }
+    >
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left column: Controls & History */}
         <div className="space-y-6 lg:col-span-1">
@@ -791,7 +807,9 @@ function SearchPage() {
                     type="button"
                     onClick={() => setSearchMode("gps")}
                     className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
-                      searchMode === "gps" ? "bg-primary text-white" : "text-muted-foreground hover:text-white"
+                      searchMode === "gps"
+                        ? "bg-primary text-white"
+                        : "text-muted-foreground hover:text-white"
                     }`}
                   >
                     📍 Localização Atual
@@ -800,7 +818,9 @@ function SearchPage() {
                     type="button"
                     onClick={() => setSearchMode("cep")}
                     className={`rounded-md py-1.5 text-xs font-medium transition-colors ${
-                      searchMode === "cep" ? "bg-primary text-white" : "text-muted-foreground hover:text-white"
+                      searchMode === "cep"
+                        ? "bg-primary text-white"
+                        : "text-muted-foreground hover:text-white"
                     }`}
                   >
                     📬 CEP
@@ -841,20 +861,20 @@ function SearchPage() {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <Label htmlFor="cidade">Cidade</Label>
-                        <Input 
-                          id="cidade" 
-                          value={cidade} 
-                          onChange={(e) => setCidade(e.target.value)} 
-                          placeholder="Ex: Osasco" 
+                        <Input
+                          id="cidade"
+                          value={cidade}
+                          onChange={(e) => setCidade(e.target.value)}
+                          placeholder="Ex: Osasco"
                         />
                       </div>
                       <div>
                         <Label htmlFor="uf">UF</Label>
-                        <Input 
-                          id="uf" 
-                          value={estado} 
-                          onChange={(e) => setEstado(e.target.value)} 
-                          placeholder="Ex: SP" 
+                        <Input
+                          id="uf"
+                          value={estado}
+                          onChange={(e) => setEstado(e.target.value)}
+                          placeholder="Ex: SP"
                           maxLength={2}
                           className="uppercase"
                         />
@@ -862,14 +882,16 @@ function SearchPage() {
                     </div>
                     <div>
                       <Label htmlFor="endereco">Endereço</Label>
-                      <Input 
-                        id="endereco" 
-                        value={rua || bairro ? `${rua || ""} ${bairro ? `- ${bairro}` : ""}`.trim() : ""} 
+                      <Input
+                        id="endereco"
+                        value={
+                          rua || bairro ? `${rua || ""} ${bairro ? `- ${bairro}` : ""}`.trim() : ""
+                        }
                         onChange={(e) => {
                           setRua(e.target.value);
                           setBairro(""); // Clear neighborhood if editing manually
-                        }} 
-                        placeholder="Rua e número (opcional)" 
+                        }}
+                        placeholder="Rua e número (opcional)"
                       />
                     </div>
                   </div>
@@ -886,7 +908,9 @@ function SearchPage() {
                         value={radiusKm}
                         min={1}
                         max={100}
-                        onChange={(e) => setRadiusKm(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                        onChange={(e) =>
+                          setRadiusKm(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))
+                        }
                       />
                       <span className="text-xs text-muted-foreground">km</span>
                     </div>
@@ -934,7 +958,9 @@ function SearchPage() {
             </CardHeader>
             <CardContent className="px-2">
               {recentSearches.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">Nenhuma busca recente.</p>
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  Nenhuma busca recente.
+                </p>
               ) : (
                 <div className="space-y-1 max-h-60 overflow-y-auto">
                   {recentSearches.map((h) => (
@@ -942,13 +968,16 @@ function SearchPage() {
                       key={h.id}
                       onClick={() => loadSearchFromHistory(h)}
                       className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors hover:bg-slate-800 ${
-                        selectedSearchId === h.id ? "bg-primary/10 border border-primary/20" : "bg-transparent"
+                        selectedSearchId === h.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "bg-transparent"
                       }`}
                     >
                       <div className="flex-1 min-w-0 pr-2">
                         <p className="font-medium text-slate-200 truncate">{h.keyword}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
-                          {h.city ? `${h.city} · ` : ""}{h.radius_km}km · {h.result_count} empresas
+                          {h.city ? `${h.city} · ` : ""}
+                          {h.radius_km}km · {h.result_count} empresas
                         </p>
                       </div>
                       <ChevronRight className="size-3 text-muted-foreground flex-shrink-0" />
@@ -966,9 +995,10 @@ function SearchPage() {
                 <Sparkles className="size-3.5" /> Como obter mais resultados?
               </h4>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Utilizamos a base de dados pública do **OpenStreetMap**. 
-                Em cidades ou bairros menores, o mapeamento comercial pode ser menor. 
-                Se obtiver 0 resultados, tente **aumentar o raio de busca** (para 20km, 50km ou mais) ou buscar termos mais genéricos.
+                Utilizamos a base de dados pública do **OpenStreetMap**. Em cidades ou bairros
+                menores, o mapeamento comercial pode ser menor. Se obtiver 0 resultados, tente
+                **aumentar o raio de busca** (para 20km, 50km ou mais) ou buscar termos mais
+                genéricos.
               </p>
             </CardContent>
           </Card>
@@ -978,10 +1008,10 @@ function SearchPage() {
         <div className="space-y-6 lg:col-span-2">
           {/* Map view */}
           <Card className="overflow-hidden border-border/60 bg-card/60">
-            <Map 
-              center={[lat, lon]} 
-              radiusKm={radiusKm} 
-              markers={mapMarkers} 
+            <Map
+              center={[lat, lon]}
+              radiusKm={radiusKm}
+              markers={mapMarkers}
               onMarkerClick={(m) => handleOpenCRMDetails(m.id)}
             />
           </Card>
@@ -1000,13 +1030,22 @@ function SearchPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10"></TableHead>
-                        <TableHead className="cursor-pointer hover:bg-muted/40" onClick={() => toggleSort("name")}>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => toggleSort("name")}
+                        >
                           Empresa <ArrowUpDown className="inline ml-1 size-3" />
                         </TableHead>
-                        <TableHead className="cursor-pointer hover:bg-muted/40" onClick={() => toggleSort("category")}>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => toggleSort("category")}
+                        >
                           Categoria <ArrowUpDown className="inline ml-1 size-3" />
                         </TableHead>
-                        <TableHead className="cursor-pointer hover:bg-muted/40" onClick={() => toggleSort("distance")}>
+                        <TableHead
+                          className="cursor-pointer hover:bg-muted/40"
+                          onClick={() => toggleSort("distance")}
+                        >
                           Distância <ArrowUpDown className="inline ml-1 size-3" />
                         </TableHead>
                         <TableHead>Website</TableHead>
@@ -1018,20 +1057,24 @@ function SearchPage() {
                       {sortedResults.map((r, index) => {
                         const hasWeb = r.website != null && r.website.trim() !== "";
                         const isLocked = !subData?.isPro && index >= 20;
-                        
+
                         // Default values for CRM fields since they are fetched inline
                         const wa = whatsappLink(r.phone);
                         const tel = telLink(r.phone);
-                        const distanceDisplay = r.distanceKm != null 
-                          ? r.distanceKm < 1 
-                            ? `${Math.round(r.distanceKm * 1000)} m` 
-                            : `${r.distanceKm.toFixed(1)} km`
-                          : "—";
+                        const distanceDisplay =
+                          r.distanceKm != null
+                            ? r.distanceKm < 1
+                              ? `${Math.round(r.distanceKm * 1000)} m`
+                              : `${r.distanceKm.toFixed(1)} km`
+                            : "—";
 
                         return (
                           <React.Fragment key={r.osm_id}>
                             {index === 20 && (
-                              <TableRow key="premium-unlock-row" className="hover:bg-transparent border-t border-border/60 bg-gradient-to-b from-primary/5 to-transparent">
+                              <TableRow
+                                key="premium-unlock-row"
+                                className="hover:bg-transparent border-t border-border/60 bg-gradient-to-b from-primary/5 to-transparent"
+                              >
                                 <TableCell colSpan={7} className="p-6 text-center">
                                   <div className="flex flex-col items-center justify-center space-y-3 max-w-sm mx-auto p-5 rounded-xl border border-primary/20 bg-slate-950/90 shadow-2xl backdrop-blur-md">
                                     <div className="grid size-10 place-items-center rounded-lg bg-primary/10 text-primary">
@@ -1042,14 +1085,20 @@ function SearchPage() {
                                         🔒 Unlock All Results
                                       </h4>
                                       <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                        We found <span className="font-semibold text-slate-300">{results.length} Businesses</span>. 
-                                        Your free account allows viewing only the first 20 businesses.
-                                        Upgrade to LeadFinder Pro and unlock all results instantly.
+                                        We found{" "}
+                                        <span className="font-semibold text-slate-300">
+                                          {results.length} Businesses
+                                        </span>
+                                        . Your free account allows viewing only the first 20
+                                        businesses. Upgrade to LeadFinder Pro and unlock all results
+                                        instantly.
                                       </p>
                                     </div>
-                                    <div className="text-xs font-bold text-primary">US$25/month</div>
-                                    <Button 
-                                      size="sm" 
+                                    <div className="text-xs font-bold text-primary">
+                                      US$25/month
+                                    </div>
+                                    <Button
+                                      size="sm"
                                       className="w-full text-[11px] font-semibold h-8"
                                       onClick={() => navigate({ to: "/pricing" })}
                                     >
@@ -1059,7 +1108,7 @@ function SearchPage() {
                                 </TableCell>
                               </TableRow>
                             )}
-                            <TableRow 
+                            <TableRow
                               className={`transition-all ${isLocked ? "hover:bg-transparent cursor-default border-border/10 opacity-75" : "cursor-pointer"}`}
                               onClick={() => !isLocked && handleOpenCRMDetails(r.osm_id)}
                             >
@@ -1084,7 +1133,9 @@ function SearchPage() {
                               </TableCell>
                               <TableCell className="text-xs text-slate-200 tabular-nums">
                                 {isLocked ? (
-                                  <span className="blur-[4px] select-none text-slate-600">0.0 km</span>
+                                  <span className="blur-[4px] select-none text-slate-600">
+                                    0.0 km
+                                  </span>
                                 ) : (
                                   distanceDisplay
                                 )}
@@ -1095,10 +1146,10 @@ function SearchPage() {
                                     www.website.com
                                   </span>
                                 ) : hasWeb ? (
-                                  <a 
-                                    href={r.website!} 
-                                    target="_blank" 
-                                    rel="noreferrer" 
+                                  <a
+                                    href={r.website!}
+                                    target="_blank"
+                                    rel="noreferrer"
                                     className="inline-flex items-center gap-1 text-primary text-xs hover:underline"
                                     onClick={(e) => e.stopPropagation()}
                                   >
@@ -1117,12 +1168,17 @@ function SearchPage() {
                                   </span>
                                 ) : (
                                   <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] text-muted-foreground">{r.city || "—"}</span>
+                                    <span className="text-[10px] text-muted-foreground">
+                                      {r.city || "—"}
+                                    </span>
                                     <CRMStatusSelector osmId={r.osm_id} />
                                   </div>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              <TableCell
+                                className="text-right"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <div className="inline-flex gap-1">
                                   {isLocked ? (
                                     <span className="text-[10px] font-semibold text-slate-500 bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5">
@@ -1131,12 +1187,26 @@ function SearchPage() {
                                   ) : (
                                     <>
                                       {tel && (
-                                        <Button asChild size="icon" variant="ghost" className="h-8 w-8" title="Ligar">
-                                          <a href={tel}><Phone className="size-3.5" /></a>
+                                        <Button
+                                          asChild
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-8 w-8"
+                                          title="Ligar"
+                                        >
+                                          <a href={tel}>
+                                            <Phone className="size-3.5" />
+                                          </a>
                                         </Button>
                                       )}
                                       {wa && (
-                                        <Button asChild size="icon" variant="ghost" className="h-8 w-8" title="WhatsApp">
+                                        <Button
+                                          asChild
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-8 w-8"
+                                          title="WhatsApp"
+                                        >
                                           <a href={wa} target="_blank" rel="noreferrer">
                                             <MessageCircle className="size-3.5 text-emerald-400" />
                                           </a>
@@ -1163,7 +1233,9 @@ function SearchPage() {
       <CompanyDrawer
         company={selectedCompany}
         onClose={() => setSelectedCompanyId(null)}
-        onUpdate={(patch) => selectedCompany && updateCompanyMutation.mutate({ id: selectedCompany.id, patch })}
+        onUpdate={(patch) =>
+          selectedCompany && updateCompanyMutation.mutate({ id: selectedCompany.id, patch })
+        }
       />
 
       {/* Floating CTA Upgrade Button when Trial is Finished */}
@@ -1187,33 +1259,43 @@ function SearchPage() {
             </div>
             <DialogTitle className="text-lg font-bold text-slate-100">🔒 Trial Expired</DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
-              Você já realizou a sua única pesquisa gratuita do trial. 
-              Assine o plano **LeadFinder Pro** para ter buscas ilimitadas, acesso completo a todos os leads e muito mais.
+              Você já realizou a sua única pesquisa gratuita do trial. Assine o plano **LeadFinder
+              Pro** para ter buscas ilimitadas, acesso completo a todos os leads e muito mais.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-4">
             <div className="rounded-xl border border-border/60 bg-card/40 p-4 space-y-2">
-              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">INCLUSO NO PRO</span>
+              <span className="text-[10px] font-semibold text-primary uppercase tracking-wider block">
+                INCLUSO NO PRO
+              </span>
               <ul className="grid grid-cols-2 gap-2 text-[10px] text-slate-300">
-                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Buscas Ilimitadas</li>
-                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Resultados sem Blur</li>
-                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> CRM Ilimitado</li>
-                <li className="flex items-center gap-1.5"><Check className="size-3 text-emerald-400" /> Filtros por CEP</li>
+                <li className="flex items-center gap-1.5">
+                  <Check className="size-3 text-emerald-400" /> Buscas Ilimitadas
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Check className="size-3 text-emerald-400" /> Resultados sem Blur
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Check className="size-3 text-emerald-400" /> CRM Ilimitado
+                </li>
+                <li className="flex items-center gap-1.5">
+                  <Check className="size-3 text-emerald-400" /> Filtros por CEP
+                </li>
               </ul>
             </div>
             <div className="flex flex-col gap-2">
-              <Button 
+              <Button
                 onClick={() => {
                   setUpgradeModalOpen(false);
                   navigate({ to: "/pricing" });
-                }} 
+                }}
                 className="w-full text-xs font-semibold"
               >
                 Upgrade to Pro (US$25/month)
               </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setUpgradeModalOpen(false)} 
+              <Button
+                variant="ghost"
+                onClick={() => setUpgradeModalOpen(false)}
                 className="w-full text-xs text-muted-foreground hover:bg-slate-900"
               >
                 Voltar
@@ -1230,28 +1312,35 @@ function SearchPage() {
             <div className="grid size-14 place-items-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-bounce">
               <Sparkles className="size-7" />
             </div>
-            <DialogTitle className="text-xl font-extrabold text-slate-100">🎉 Great Start!</DialogTitle>
+            <DialogTitle className="text-xl font-extrabold text-slate-100">
+              🎉 Great Start!
+            </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
-              Your first search found <span className="font-semibold text-slate-300">{firstSearchDoneCount} Businesses</span>!
+              Your first search found{" "}
+              <span className="font-semibold text-slate-300">
+                {firstSearchDoneCount} Businesses
+              </span>
+              !
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 pt-3">
             <p className="text-xs text-slate-300 leading-relaxed">
-              Only the first 20 are available on the Free Trial. Unlock the remaining {Math.max(0, firstSearchDoneCount - 20)} businesses by upgrading today.
+              Only the first 20 are available on the Free Trial. Unlock the remaining{" "}
+              {Math.max(0, firstSearchDoneCount - 20)} businesses by upgrading today.
             </p>
             <div className="flex flex-col gap-2">
-              <Button 
+              <Button
                 onClick={() => {
                   setFirstSearchPopupOpen(false);
                   navigate({ to: "/pricing" });
-                }} 
+                }}
                 className="w-full text-xs font-semibold"
               >
                 Unlock All Results (US$25/month)
               </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setFirstSearchPopupOpen(false)} 
+              <Button
+                variant="ghost"
+                onClick={() => setFirstSearchPopupOpen(false)}
                 className="w-full text-xs text-muted-foreground hover:bg-slate-900"
               >
                 Continuar no Trial
@@ -1329,10 +1418,7 @@ function CRMStatusSelector({ osmId }: { osmId: string }) {
   const changeMutation = useMutation({
     mutationFn: async (status: Status) => {
       if (!record) return;
-      const { error } = await supabase
-        .from("companies")
-        .update({ status })
-        .eq("id", record.id);
+      const { error } = await supabase.from("companies").update({ status }).eq("id", record.id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -1344,16 +1430,15 @@ function CRMStatusSelector({ osmId }: { osmId: string }) {
   if (!record) return null;
 
   return (
-    <Select
-      value={record.status}
-      onValueChange={(v) => changeMutation.mutate(v as Status)}
-    >
+    <Select value={record.status} onValueChange={(v) => changeMutation.mutate(v as Status)}>
       <SelectTrigger className="h-7 w-[120px] text-[10px] bg-slate-900/60 border-border/40">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {(Object.keys(STATUS_LABELS) as Status[]).map((s) => (
-          <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>
+          <SelectItem key={s} value={s} className="text-xs">
+            {STATUS_LABELS[s]}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -1407,7 +1492,9 @@ function CompanyDrawer({
         {company && (
           <>
             <SheetHeader>
-              <SheetTitle className="pr-8 text-lg font-bold text-slate-100">{company.name}</SheetTitle>
+              <SheetTitle className="pr-8 text-lg font-bold text-slate-100">
+                {company.name}
+              </SheetTitle>
             </SheetHeader>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -1415,7 +1502,9 @@ function CompanyDrawer({
                 {STATUS_LABELS[company.status]}
               </Badge>
               {(!company.website || company.website.trim() === "") && (
-                <Badge className="border-transparent bg-rose-500/15 text-rose-300">🔴 Sem website</Badge>
+                <Badge className="border-transparent bg-rose-500/15 text-rose-300">
+                  🔴 Sem website
+                </Badge>
               )}
             </div>
 
@@ -1423,7 +1512,9 @@ function CompanyDrawer({
               <div className="flex items-start gap-3">
                 <MapPin className="size-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div>
-                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">Endereço</div>
+                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">
+                    Endereço
+                  </div>
                   <div className="text-slate-200 mt-0.5">{company.address || "—"}</div>
                 </div>
               </div>
@@ -1431,15 +1522,21 @@ function CompanyDrawer({
               <div className="flex items-start gap-3">
                 <Phone className="size-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div>
-                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">Telefone</div>
-                  <div className="text-slate-200 mt-0.5">{company.phone ? formatPhoneBR(company.phone) : "—"}</div>
+                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">
+                    Telefone
+                  </div>
+                  <div className="text-slate-200 mt-0.5">
+                    {company.phone ? formatPhoneBR(company.phone) : "—"}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-start gap-3">
                 <Mail className="size-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div>
-                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">E-mail</div>
+                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">
+                    E-mail
+                  </div>
                   <div className="text-slate-200 mt-0.5">{company.email || "—"}</div>
                 </div>
               </div>
@@ -1447,13 +1544,22 @@ function CompanyDrawer({
               <div className="flex items-start gap-3">
                 <Globe className="size-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                 <div>
-                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">Website</div>
+                  <div className="uppercase tracking-wide text-[10px] text-muted-foreground">
+                    Website
+                  </div>
                   <div className="mt-0.5">
                     {company.website ? (
-                      <a href={company.website} target="_blank" rel="noreferrer" className="text-primary hover:underline font-medium">
+                      <a
+                        href={company.website}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline font-medium"
+                      >
                         {company.website}
                       </a>
-                    ) : "—"}
+                    ) : (
+                      "—"
+                    )}
                   </div>
                 </div>
               </div>
@@ -1462,17 +1568,27 @@ function CompanyDrawer({
             <div className="mt-6 flex flex-wrap gap-2">
               {tel && (
                 <Button asChild variant="outline" size="sm" className="text-xs">
-                  <a href={tel}><Phone className="mr-2 size-3.5" /> Ligar</a>
+                  <a href={tel}>
+                    <Phone className="mr-2 size-3.5" /> Ligar
+                  </a>
                 </Button>
               )}
               {wa && (
-                <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-xs text-white">
-                  <a href={wa} target="_blank" rel="noreferrer"><MessageCircle className="mr-2 size-3.5" /> WhatsApp</a>
+                <Button
+                  asChild
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-xs text-white"
+                >
+                  <a href={wa} target="_blank" rel="noreferrer">
+                    <MessageCircle className="mr-2 size-3.5" /> WhatsApp
+                  </a>
                 </Button>
               )}
               {company.website && (
                 <Button asChild variant="outline" size="sm" className="text-xs">
-                  <a href={company.website} target="_blank" rel="noreferrer"><Globe className="mr-2 size-3.5" /> Abrir Site</a>
+                  <a href={company.website} target="_blank" rel="noreferrer">
+                    <Globe className="mr-2 size-3.5" /> Abrir Site
+                  </a>
                 </Button>
               )}
             </div>
@@ -1482,14 +1598,21 @@ function CompanyDrawer({
             {/* CRM Management section */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-slate-100">Status & Agendamentos</h3>
-              
+
               <div className="space-y-1">
                 <Label>Status do Lead</Label>
-                <Select value={company.status} onValueChange={(v) => onUpdate({ status: v as Status })}>
-                  <SelectTrigger className="w-full text-xs"><SelectValue /></SelectTrigger>
+                <Select
+                  value={company.status}
+                  onValueChange={(v) => onUpdate({ status: v as Status })}
+                >
+                  <SelectTrigger className="w-full text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
                     {(Object.keys(STATUS_LABELS) as Status[]).map((s) => (
-                      <SelectItem key={s} value={s} className="text-xs">{STATUS_LABELS[s]}</SelectItem>
+                      <SelectItem key={s} value={s} className="text-xs">
+                        {STATUS_LABELS[s]}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1537,7 +1660,10 @@ function CompanyDrawer({
               <Textarea
                 rows={5}
                 value={notes}
-                onChange={(e) => { setNotes(e.target.value); setNotesDirty(true); }}
+                onChange={(e) => {
+                  setNotes(e.target.value);
+                  setNotesDirty(true);
+                }}
                 placeholder="Ex.: Liguei hoje. Falei com o proprietário."
                 className="text-xs text-slate-200"
               />

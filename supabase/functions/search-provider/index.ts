@@ -27,7 +27,10 @@ serve(async (req) => {
     }
 
     const userClient = createClient(supabaseUrl, authHeader);
-    const { data: { user }, error: userErr } = await userClient.auth.getUser();
+    const {
+      data: { user },
+      error: userErr,
+    } = await userClient.auth.getUser();
 
     if (userErr || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -84,18 +87,155 @@ serve(async (req) => {
     if (provider === "openstreetmap") {
       // OSM / Overpass API Query
       const radiusMeters = radiusKm * 1000;
-      const query = `[out:json][timeout:30];(node["amenity"~"${keyword.trim().toLowerCase()}",i](around:${radiusMeters},${lat},${lon});way["amenity"~"${keyword.trim().toLowerCase()}",i](around:${radiusMeters},${lat},${lon});relation["amenity"~"${keyword.trim().toLowerCase()}",i](around:${radiusMeters},${lat},${lon}););out center tags ${limit};`;
-      
-      const overpassUrl = "https://overpass-api.de/api/interpreter";
-      const overpassRes = await fetch(overpassUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: query,
-      });
 
-      if (!overpassRes.ok) throw new Error("Erro de comunicação com Overpass API");
-      const osmData = await overpassRes.json();
-      
+      const CATEGORY_PRESETS = [
+        {
+          value: "restaurant",
+          label: "Restaurante",
+          filters: [`["amenity"="restaurant"]`, `["amenity"="food_court"]`],
+        },
+        {
+          value: "marmoraria",
+          label: "Marmoraria",
+          filters: [
+            `["shop"="stonemason"]`,
+            `["craft"="stone_cutter"]`,
+            `["shop"="stone"]`,
+            `["craft"="stonemason"]`,
+          ],
+        },
+        {
+          value: "dentist",
+          label: "Dentista",
+          filters: [`["amenity"="dentist"]`, `["healthcare"="dentist"]`],
+        },
+        {
+          value: "advogado",
+          label: "Advogado",
+          filters: [`["office"="lawyer"]`, `["office"="lawyers"]`, `["office"="estate_agent"]`],
+        },
+        {
+          value: "gym",
+          label: "Academia",
+          filters: [`["leisure"="fitness_centre"]`, `["sport"="fitness"]`, `["amenity"="gym"]`],
+        },
+        {
+          value: "auto_escola",
+          label: "Auto Escola",
+          filters: [`["amenity"="driving_school"]`, `["driving_school"="yes"]`],
+        },
+        {
+          value: "pharmacy",
+          label: "Farmácia",
+          filters: [`["amenity"="pharmacy"]`, `["healthcare"="pharmacy"]`],
+        },
+        { value: "bakery", label: "Padaria", filters: [`["shop"="bakery"]`] },
+        {
+          value: "clinic",
+          label: "Clínica",
+          filters: [
+            `["amenity"="clinic"]`,
+            `["amenity"="doctors"]`,
+            `["healthcare"="clinic"]`,
+            `["healthcare"="doctor"]`,
+          ],
+        },
+        {
+          value: "supermarket",
+          label: "Mercado",
+          filters: [`["shop"="supermarket"]`, `["shop"="convenience"]`],
+        },
+        {
+          value: "hotel",
+          label: "Hotel",
+          filters: [`["tourism"="hotel"]`, `["tourism"="guest_house"]`, `["tourism"="hostel"]`],
+        },
+        { value: "car_repair", label: "Oficina", filters: [`["shop"="car_repair"]`] },
+        { value: "barber", label: "Barbearia", filters: [`["shop"="hairdresser"]`] },
+        {
+          value: "beauty",
+          label: "Salão de Beleza",
+          filters: [`["shop"="beauty"]`, `["shop"="beauty_salon"]`],
+        },
+        { value: "pet", label: "Pet Shop", filters: [`["shop"="pet"]`, `["shop"="pet_grooming"]`] },
+        {
+          value: "builder",
+          label: "Construtora",
+          filters: [`["office"="builder"]`, `["office"="construction"]`, `["craft"="builder"]`],
+        },
+      ];
+
+      const cleanKeyword = keyword.trim().toLowerCase();
+      const preset = CATEGORY_PRESETS.find(
+        (p) => p.value.toLowerCase() === cleanKeyword || p.label.toLowerCase() === cleanKeyword,
+      );
+
+      const filters = preset
+        ? preset.filters
+        : [
+            `["amenity"~"${cleanKeyword}",i]`,
+            `["shop"~"${cleanKeyword}",i]`,
+            `["office"~"${cleanKeyword}",i]`,
+            `["leisure"~"${cleanKeyword}",i]`,
+            `["craft"~"${cleanKeyword}",i]`,
+          ];
+
+      const parts = filters
+        .map(
+          (f) =>
+            `node${f}(around:${radiusMeters},${lat},${lon});way${f}(around:${radiusMeters},${lat},${lon});`,
+        )
+        .join("\n");
+      const query = `[out:json][timeout:30];(\n${parts}\n);out center tags ${limit};`;
+
+      const OVERPASS_SERVERS = [
+        "https://overpass-api.de/api/interpreter",
+        "https://lz4.overpass-api.de/api/interpreter",
+        "https://z.overpass-api.de/api/interpreter",
+        "https://overpass.private.coffee/api/interpreter",
+        "https://overpass.nchc.org.tw/api/interpreter",
+      ];
+
+      let lastError: Error | null = null;
+      let osmData = null;
+
+      // Embaralha a lista de servidores para distribuir a carga e evitar bloqueios por rate limit
+      const shuffledServers = [...OVERPASS_SERVERS].sort(() => Math.random() - 0.5);
+
+      for (const server of shuffledServers) {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout per server
+
+          const overpassRes = await fetch(server, {
+            method: "POST",
+            headers: {
+              "Content-Type": "text/plain",
+              "User-Agent": "LeadFinder-Prospecting-App/1.0",
+            },
+            body: query,
+            signal: controller.signal,
+          });
+
+          clearTimeout(timeoutId);
+
+          if (overpassRes.ok) {
+            osmData = await overpassRes.json();
+            break;
+          } else {
+            console.warn(`Overpass server ${server} failed with status: ${overpassRes.status}`);
+            lastError = new Error(`Overpass status ${overpassRes.status} from ${server}`);
+          }
+        } catch (err) {
+          console.warn(`Overpass server ${server} threw error:`, err);
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+
+      if (!osmData) {
+        throw lastError || new Error("Erro de comunicação com todos os servidores do Overpass API");
+      }
+
       results = (osmData.elements || []).map((el: any) => {
         const tags = el.tags || {};
         return {
@@ -104,7 +244,9 @@ serve(async (req) => {
           phone: tags.phone || tags["contact:phone"] || null,
           website: tags.website || tags["contact:website"] || null,
           email: tags.email || tags["contact:email"] || null,
-          address: tags["addr:street"] ? `${tags["addr:street"]}, ${tags["addr:housenumber"] || ""}` : null,
+          address: tags["addr:street"]
+            ? `${tags["addr:street"]}, ${tags["addr:housenumber"] || ""}`
+            : null,
           city: tags["addr:city"] || null,
           state: tags["addr:state"] || null,
           country: tags["addr:country"] || null,
@@ -119,7 +261,6 @@ serve(async (req) => {
           status: "novo",
         };
       });
-
     } else if (provider === "google_places") {
       // Google Places Text Search
       const radiusMeters = radiusKm * 1000;
@@ -127,7 +268,7 @@ serve(async (req) => {
       const apiRes = await fetch(url);
       if (!apiRes.ok) throw new Error("Erro na requisição da API Google Places");
       const googleData = await apiRes.json();
-      
+
       if (googleData.status === "REQUEST_DENIED") {
         throw new Error(googleData.error_message || "Chave de API do Google negada.");
       }
@@ -152,7 +293,6 @@ serve(async (req) => {
         provider_reference: place.place_id,
         status: "novo",
       }));
-
     } else if (provider === "outscraper") {
       // Outscraper API
       const url = `https://api.outscraper.com/maps/search-v2?query=${encodeURIComponent(keyword)}&limit=${limit}&key=${apiKey}`;
@@ -160,7 +300,7 @@ serve(async (req) => {
       if (!apiRes.ok) throw new Error("Erro na requisição da API Outscraper");
       const outData = await apiRes.json();
       const outResults = outData.data?.[0] || [];
-      
+
       results = outResults.map((item: any) => ({
         company_name: item.name,
         category: item.subtypes?.[0] || keyword,
@@ -181,7 +321,6 @@ serve(async (req) => {
         provider_reference: item.id || Math.random().toString(),
         status: "novo",
       }));
-
     } else if (provider === "serpapi") {
       // SerpAPI Google Maps
       const url = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)}&ll=@${lat},${lon},13z&api_key=${apiKey}`;
@@ -210,12 +349,11 @@ serve(async (req) => {
         provider_reference: item.place_id || Math.random().toString(),
         status: "novo",
       }));
-
     } else if (provider === "apify") {
       // Apify Task execution
       const actorId = "apify/google-maps-scraper";
       const runUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${apiKey}`;
-      
+
       const runRes = await fetch(runUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -265,7 +403,6 @@ serve(async (req) => {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,

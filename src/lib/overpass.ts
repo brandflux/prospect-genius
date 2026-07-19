@@ -8,22 +8,80 @@ export type CategoryPreset = {
 };
 
 export const CATEGORY_PRESETS: CategoryPreset[] = [
-  { value: "restaurant", label: "Restaurante", filters: [`["amenity"="restaurant"]`, `["amenity"="food_court"]`] },
-  { value: "marmoraria", label: "Marmoraria", filters: [`["shop"="stonemason"]`, `["craft"="stone_cutter"]`, `["shop"="stone"]`, `["craft"="stonemason"]`] },
-  { value: "dentist", label: "Dentista", filters: [`["amenity"="dentist"]`, `["healthcare"="dentist"]`] },
-  { value: "advogado", label: "Advogado", filters: [`["office"="lawyer"]`, `["office"="lawyers"]`, `["office"="estate_agent"]`] },
-  { value: "gym", label: "Academia", filters: [`["leisure"="fitness_centre"]`, `["sport"="fitness"]`, `["amenity"="gym"]`] },
-  { value: "auto_escola", label: "Auto Escola", filters: [`["amenity"="driving_school"]`, `["driving_school"="yes"]`] },
-  { value: "pharmacy", label: "Farmácia", filters: [`["amenity"="pharmacy"]`, `["healthcare"="pharmacy"]`] },
+  {
+    value: "restaurant",
+    label: "Restaurante",
+    filters: [`["amenity"="restaurant"]`, `["amenity"="food_court"]`],
+  },
+  {
+    value: "marmoraria",
+    label: "Marmoraria",
+    filters: [
+      `["shop"="stonemason"]`,
+      `["craft"="stone_cutter"]`,
+      `["shop"="stone"]`,
+      `["craft"="stonemason"]`,
+    ],
+  },
+  {
+    value: "dentist",
+    label: "Dentista",
+    filters: [`["amenity"="dentist"]`, `["healthcare"="dentist"]`],
+  },
+  {
+    value: "advogado",
+    label: "Advogado",
+    filters: [`["office"="lawyer"]`, `["office"="lawyers"]`, `["office"="estate_agent"]`],
+  },
+  {
+    value: "gym",
+    label: "Academia",
+    filters: [`["leisure"="fitness_centre"]`, `["sport"="fitness"]`, `["amenity"="gym"]`],
+  },
+  {
+    value: "auto_escola",
+    label: "Auto Escola",
+    filters: [`["amenity"="driving_school"]`, `["driving_school"="yes"]`],
+  },
+  {
+    value: "pharmacy",
+    label: "Farmácia",
+    filters: [`["amenity"="pharmacy"]`, `["healthcare"="pharmacy"]`],
+  },
   { value: "bakery", label: "Padaria", filters: [`["shop"="bakery"]`] },
-  { value: "clinic", label: "Clínica", filters: [`["amenity"="clinic"]`, `["amenity"="doctors"]`, `["healthcare"="clinic"]`, `["healthcare"="doctor"]`] },
-  { value: "supermarket", label: "Mercado", filters: [`["shop"="supermarket"]`, `["shop"="convenience"]`] },
-  { value: "hotel", label: "Hotel", filters: [`["tourism"="hotel"]`, `["tourism"="guest_house"]`, `["tourism"="hostel"]`] },
+  {
+    value: "clinic",
+    label: "Clínica",
+    filters: [
+      `["amenity"="clinic"]`,
+      `["amenity"="doctors"]`,
+      `["healthcare"="clinic"]`,
+      `["healthcare"="doctor"]`,
+    ],
+  },
+  {
+    value: "supermarket",
+    label: "Mercado",
+    filters: [`["shop"="supermarket"]`, `["shop"="convenience"]`],
+  },
+  {
+    value: "hotel",
+    label: "Hotel",
+    filters: [`["tourism"="hotel"]`, `["tourism"="guest_house"]`, `["tourism"="hostel"]`],
+  },
   { value: "car_repair", label: "Oficina", filters: [`["shop"="car_repair"]`] },
   { value: "barber", label: "Barbearia", filters: [`["shop"="hairdresser"]`] },
-  { value: "beauty", label: "Salão de Beleza", filters: [`["shop"="beauty"]`, `["shop"="beauty_salon"]`] },
+  {
+    value: "beauty",
+    label: "Salão de Beleza",
+    filters: [`["shop"="beauty"]`, `["shop"="beauty_salon"]`],
+  },
   { value: "pet", label: "Pet Shop", filters: [`["shop"="pet"]`, `["shop"="pet_grooming"]`] },
-  { value: "builder", label: "Construtora", filters: [`["office"="builder"]`, `["office"="construction"]`, `["craft"="builder"]`] },
+  {
+    value: "builder",
+    label: "Construtora",
+    filters: [`["office"="builder"]`, `["office"="construction"]`, `["craft"="builder"]`],
+  },
 ];
 
 export type OsmPoi = {
@@ -107,13 +165,7 @@ type OverpassResponse = { elements: OverpassElement[] };
 
 function pickCategory(tags: Record<string, string>): string | null {
   return (
-    tags.amenity ||
-    tags.shop ||
-    tags.tourism ||
-    tags.leisure ||
-    tags.craft ||
-    tags.office ||
-    null
+    tags.amenity || tags.shop || tags.tourism || tags.leisure || tags.craft || tags.office || null
   );
 }
 
@@ -127,8 +179,8 @@ const OVERPASS_SERVERS = [
   "https://overpass-api.de/api/interpreter",
   "https://lz4.overpass-api.de/api/interpreter",
   "https://z.overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
-  "https://overpass.nchc.org.tw/api/interpreter"
+  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.nchc.org.tw/api/interpreter",
 ];
 
 async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 12000) {
@@ -137,7 +189,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 1
   try {
     const response = await fetch(url, {
       ...options,
-      signal: controller.signal
+      signal: controller.signal,
     });
     clearTimeout(id);
     return response;
@@ -162,17 +214,23 @@ export async function overpassSearchAround(opts: {
     .join("\n");
   const query = `[out:json][timeout:30];(\n${parts}\n);out center tags ${opts.limit ?? 200};`;
 
-  let lastError: any = null;
-  for (const server of OVERPASS_SERVERS) {
+  let lastError: Error | null = null;
+  // Embaralha a lista de servidores para distribuir a carga e evitar bloqueios por rate limit
+  const shuffledServers = [...OVERPASS_SERVERS].sort(() => Math.random() - 0.5);
+  for (const server of shuffledServers) {
     try {
-      const res = await fetchWithTimeout(server, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "text/plain",
-          "User-Agent": "LeadFinder-Prospecting-App/1.0"
+      const res = await fetchWithTimeout(
+        server,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain",
+            "User-Agent": "LeadFinder-Prospecting-App/1.0",
+          },
+          body: query,
         },
-        body: query,
-      }, 15000); // 15 seconds timeout per server
+        15000,
+      ); // 15 seconds timeout per server
 
       if (res.ok) {
         const json = (await res.json()) as OverpassResponse;
@@ -204,7 +262,7 @@ export async function overpassSearchAround(opts: {
       }
     } catch (err) {
       console.warn(`Overpass server ${server} threw error:`, err);
-      lastError = err;
+      lastError = err instanceof Error ? err : new Error(String(err));
     }
   }
 

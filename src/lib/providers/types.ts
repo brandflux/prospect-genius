@@ -1,4 +1,4 @@
-import { overpassSearchAround, calculateDistance } from "@/lib/overpass";
+import { overpassSearchAround, calculateDistance, CATEGORY_PRESETS } from "@/lib/overpass";
 
 // Padrão unificado de retorno do LeadFinder
 export interface StandardizedCompany {
@@ -44,15 +44,22 @@ export class OpenStreetMapProvider implements ISearchProvider {
   }): Promise<StandardizedCompany[]> {
     // Buscar categorias usando o motor Overpass existente
     const radiusMeters = params.radiusKm * 1000;
-    
-    // Filtro padrão fallback se não achar preset
-    const filters = [
-      `["amenity"~"${params.keyword.trim().toLowerCase()}",i]`,
-      `["shop"~"${params.keyword.trim().toLowerCase()}",i]`,
-      `["office"~"${params.keyword.trim().toLowerCase()}",i]`,
-      `["leisure"~"${params.keyword.trim().toLowerCase()}",i]`,
-      `["craft"~"${params.keyword.trim().toLowerCase()}",i]`
-    ];
+    const cleanKeyword = params.keyword.trim().toLowerCase();
+
+    // Tenta encontrar um preset correspondente pelo value ou label (case-insensitive)
+    const preset = CATEGORY_PRESETS.find(
+      (p) => p.value.toLowerCase() === cleanKeyword || p.label.toLowerCase() === cleanKeyword,
+    );
+
+    const filters = preset
+      ? preset.filters
+      : [
+          `["amenity"~"${cleanKeyword}",i]`,
+          `["shop"~"${cleanKeyword}",i]`,
+          `["office"~"${cleanKeyword}",i]`,
+          `["leisure"~"${cleanKeyword}",i]`,
+          `["craft"~"${cleanKeyword}",i]`,
+        ];
 
     const pois = await overpassSearchAround({
       lat: params.lat,
@@ -104,14 +111,14 @@ export class GooglePlacesProvider implements ISearchProvider {
     apiKey?: string;
   }): Promise<StandardizedCompany[]> {
     if (!params.apiKey) throw new Error("Google Places API Key is missing.");
-    
+
     const radiusMeters = params.radiusKm * 1000;
     const url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${params.lat},${params.lon}&radius=${radiusMeters}&keyword=${encodeURIComponent(params.keyword)}&key=${params.apiKey}`;
-    
+
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Google Places: ${res.statusText}`);
     const data = await res.json();
-    
+
     if (data.status === "REQUEST_DENIED") {
       throw new Error(data.error_message || "Chave de API do Google rejeitada.");
     }
@@ -151,10 +158,10 @@ export class OutscraperProvider implements ISearchProvider {
     apiKey?: string;
   }): Promise<StandardizedCompany[]> {
     if (!params.apiKey) throw new Error("Outscraper API Key is missing.");
-    
+
     // Outscraper API endpoint para busca de locais no maps
     const url = `https://api.outscraper.com/maps/search-v2?query=${encodeURIComponent(params.keyword)}&limit=${params.limit}&key=${params.apiKey}`;
-    
+
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Outscraper: ${res.statusText}`);
     const data = await res.json();
@@ -197,7 +204,7 @@ export class SerpApiProvider implements ISearchProvider {
 
     // SerpAPI Google Maps search engine
     const url = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(params.keyword)}&ll=@${params.lat},${params.lon},13z&api_key=${params.apiKey}`;
-    
+
     const res = await fetch(url);
     if (!res.ok) throw new Error(`SerpAPI: ${res.statusText}`);
     const data = await res.json();
@@ -241,7 +248,7 @@ export class ApifyProvider implements ISearchProvider {
     // Executa e busca dados do Apify Google Maps Scraper Actor
     const actorId = "apify/google-maps-scraper";
     const runUrl = `https://api.apify.com/v2/acts/${actorId}/runs?token=${params.apiKey}`;
-    
+
     const runRes = await fetch(runUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
