@@ -43,7 +43,9 @@ function PricingPage() {
 
   const upgradeMutation = useMutation({
     mutationFn: async () => {
-      if (!subData?.userId) throw new Error("Usuário não logado.");
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) throw new Error("Usuário não logado.");
 
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
