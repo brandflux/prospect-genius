@@ -127,6 +127,7 @@ function SearchPage() {
   const [firstSearchPopupOpen, setFirstSearchPopupOpen] = useState(false);
   const [firstSearchDoneCount, setFirstSearchDoneCount] = useState(0);
   const [selectedSearchId, setSelectedSearchId] = useState<string | null>(null);
+  const [localTrialFinished, setLocalTrialFinished] = useState(false);
 
   // Load search from query param searchId
   useEffect(() => {
@@ -188,6 +189,12 @@ function SearchPage() {
       };
     },
   });
+
+  useEffect(() => {
+    if (subData?.isTrialFinished) {
+      setLocalTrialFinished(true);
+    }
+  }, [subData]);
 
   // Query active search provider
   const { data: activeProvider, isLoading: loadingProvider } = useQuery({
@@ -361,7 +368,7 @@ function SearchPage() {
     if (!categoryInput.trim()) return toast.error("Informe a categoria de busca.");
 
     // Check trial limits
-    if (subData && !subData.isPro && subData.isTrialFinished) {
+    if ((subData && !subData.isPro && subData.isTrialFinished) || localTrialFinished) {
       setUpgradeModalOpen(true);
       return;
     }
@@ -487,14 +494,17 @@ function SearchPage() {
 
       // Update trial usage if this was the user's first search in trial mode and we actually found results
       if (subData && !subData.isPro && !subData.isTrialFinished && pois.length > 0) {
-        await supabase
-          .from("trial_usage")
-          .update({
+        await supabase.from("trial_usage").upsert(
+          {
+            user_id: subData.userId!,
             searches_used: 1,
             trial_finished: true,
-          })
-          .eq("user_id", subData.userId!);
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" },
+        );
 
+        setLocalTrialFinished(true);
         qc.invalidateQueries({ queryKey: ["user-subscription-status"] });
         setFirstSearchDoneCount(pois.length);
         setFirstSearchPopupOpen(true);
@@ -931,7 +941,7 @@ function SearchPage() {
                   </div>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || isLoadingSub}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 size-4 animate-spin" />

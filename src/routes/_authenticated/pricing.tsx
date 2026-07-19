@@ -44,30 +44,21 @@ function PricingPage() {
   const upgradeMutation = useMutation({
     mutationFn: async () => {
       if (!subData?.userId) throw new Error("Usuário não logado.");
-      
-      // Simula chamada de Checkout do Stripe
-      await new Promise((resolve) => setTimeout(resolve, 2500));
 
-      const { error } = await supabase
-        .from("subscriptions")
-        .upsert({
-          user_id: subData.userId,
-          status: "active",
-          price_id: "price_leadfinder_pro_25",
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        });
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          priceId: "price_1TuvTV5CsIADizM8y5mwvMcH", // Substitua pelo seu ID de Preço do Stripe
+        },
+      });
 
       if (error) throw error;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["user-subscription-status"] });
-      qc.invalidateQueries({ queryKey: ["dashboard-kpis-and-searches"] });
-      toast.success("LeadFinder Pro ativado com sucesso! Aproveite buscas ilimitadas.");
-      setCheckoutSimulated(false);
-      navigate({ to: "/dashboard" });
+      if (!data?.url) throw new Error("Não foi possível gerar a URL de checkout.");
+
+      // Redireciona o usuário para a página segura de pagamento do Stripe
+      window.location.href = data.url;
     },
     onError: (e) => {
-      toast.error(e instanceof Error ? e.message : "Erro ao simular checkout.");
+      toast.error(e instanceof Error ? e.message : "Erro ao abrir checkout do Stripe.");
       setCheckoutSimulated(false);
     },
   });
@@ -103,7 +94,8 @@ function PricingPage() {
           <div className="space-y-2">
             <h2 className="text-xl font-bold text-slate-100">Abrindo Checkout Seguro...</h2>
             <p className="text-sm text-muted-foreground">
-              Conectando com o Stripe Checkout para simular a assinatura de sua conta com segurança. Não feche esta janela.
+              Conectando com o Stripe Checkout para simular a assinatura de sua conta com segurança.
+              Não feche esta janela.
             </p>
           </div>
           <div className="w-full bg-slate-900/50 rounded-lg p-3 text-[10px] text-muted-foreground border border-border/40 font-mono">
@@ -114,14 +106,18 @@ function PricingPage() {
         <div className="flex flex-col items-center justify-center py-6 px-4">
           {/* Header Section */}
           <div className="text-center max-w-2xl space-y-3 mb-10">
-            <Badge variant="outline" className="text-xs border-primary/20 text-primary bg-primary/5 px-3 py-1 font-semibold uppercase tracking-wider">
+            <Badge
+              variant="outline"
+              className="text-xs border-primary/20 text-primary bg-primary/5 px-3 py-1 font-semibold uppercase tracking-wider"
+            >
               ✨ LeadFinder Pro
             </Badge>
             <h1 className="text-3xl font-extrabold text-slate-100 md:text-4xl tracking-tight bg-gradient-to-r from-slate-100 to-slate-400 bg-clip-text text-transparent">
               Find Businesses Before Your Competitors
             </h1>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-lg mx-auto">
-              Find local businesses, organize your leads and manage your sales pipeline with one simple platform.
+              Find local businesses, organize your leads and manage your sales pipeline with one
+              simple platform.
             </p>
           </div>
 
@@ -138,15 +134,23 @@ function PricingPage() {
                   <div className="mx-auto grid size-12 place-items-center rounded-xl bg-primary/10 text-primary mb-3">
                     <ShieldCheck className="size-6" />
                   </div>
-                  <CardTitle className="text-xl font-bold text-slate-100">Sua Assinatura está Ativa!</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">Você é membro do plano LeadFinder Pro.</p>
+                  <CardTitle className="text-xl font-bold text-slate-100">
+                    Sua Assinatura está Ativa!
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Você é membro do plano LeadFinder Pro.
+                  </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="text-center py-4 bg-slate-900/40 rounded-xl border border-border/60">
                     <span className="text-xs text-muted-foreground block">Valor cobrado</span>
                     <span className="text-2xl font-bold text-slate-100">US$ 25/mês</span>
                   </div>
-                  <Button className="w-full" variant="outline" onClick={() => navigate({ to: "/search" })}>
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => navigate({ to: "/search" })}
+                  >
                     Ir para Buscar Empresas
                   </Button>
                 </CardContent>
@@ -158,13 +162,21 @@ function PricingPage() {
                 <div className="absolute -right-12 -top-12 size-36 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
 
                 <CardHeader className="pb-4 border-b border-border/20">
-                  <span className="text-xs font-semibold text-primary uppercase tracking-wider block mb-1">PRO PLAN</span>
-                  <CardTitle className="text-2xl font-bold text-slate-100">LeadFinder Pro</CardTitle>
+                  <span className="text-xs font-semibold text-primary uppercase tracking-wider block mb-1">
+                    PRO PLAN
+                  </span>
+                  <CardTitle className="text-2xl font-bold text-slate-100">
+                    LeadFinder Pro
+                  </CardTitle>
                   <div className="flex items-baseline gap-1 mt-3">
-                    <span className="text-3xl font-extrabold text-slate-100 tracking-tight">US$ 25</span>
+                    <span className="text-3xl font-extrabold text-slate-100 tracking-tight">
+                      US$ 25
+                    </span>
                     <span className="text-sm text-muted-foreground font-medium">/month</span>
                   </div>
-                  <span className="text-[10px] text-muted-foreground block mt-1">Cobrança recorrente mensal. Cancele quando quiser.</span>
+                  <span className="text-[10px] text-muted-foreground block mt-1">
+                    Cobrança recorrente mensal. Cancele quando quiser.
+                  </span>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
                   {/* Features List */}
@@ -178,7 +190,10 @@ function PricingPage() {
                   </ul>
 
                   {/* Checkout Button */}
-                  <Button className="w-full h-11 text-xs font-semibold text-white bg-primary hover:bg-primary/95 transition-all shadow-md shadow-primary/20" onClick={handleUpgrade}>
+                  <Button
+                    className="w-full h-11 text-xs font-semibold text-white bg-primary hover:bg-primary/95 transition-all shadow-md shadow-primary/20"
+                    onClick={handleUpgrade}
+                  >
                     Start for US$25/month
                   </Button>
                 </CardContent>
@@ -192,9 +207,19 @@ function PricingPage() {
 }
 
 // Simple Badge component for styling within the page if not loaded elsewhere
-function Badge({ children, variant, className }: { children: React.ReactNode, variant?: string, className?: string }) {
+function Badge({
+  children,
+  variant,
+  className,
+}: {
+  children: React.ReactNode;
+  variant?: string;
+  className?: string;
+}) {
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${className}`}
+    >
       {children}
     </span>
   );

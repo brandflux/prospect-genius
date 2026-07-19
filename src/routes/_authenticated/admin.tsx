@@ -47,19 +47,25 @@ function AdminPage() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-profiles"],
     queryFn: async () => {
-      const [profilesRes, rolesRes] = await Promise.all([
+      const [profilesRes, rolesRes, subsRes, trialRes] = await Promise.all([
         supabase.from("profiles").select("*").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("*"),
+        supabase.from("subscriptions").select("*"),
+        supabase.from("trial_usage").select("*"),
       ]);
 
       if (profilesRes.error) throw profilesRes.error;
       if (rolesRes.error) throw rolesRes.error;
 
       const rolesMap = new Map(rolesRes.data?.map((r) => [r.user_id, r.role]) ?? []);
-      
+      const subsMap = new Map(subsRes.data?.map((s) => [s.user_id, s]) ?? []);
+      const trialMap = new Map(trialRes.data?.map((t) => [t.user_id, t]) ?? []);
+
       return (profilesRes.data ?? []).map((p) => ({
         ...p,
         role: rolesMap.get(p.id) || "user",
+        subscription: subsMap.get(p.id) || null,
+        trial: trialMap.get(p.id) || null,
       }));
     },
   });
@@ -81,8 +87,53 @@ function AdminPage() {
     },
   });
 
+  const toggleProMutation = useMutation({
+    mutationFn: async (payload: { userId: string; isPro: boolean }) => {
+      const status = payload.isPro ? "active" : "inactive";
+
+      const { data: existing } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", payload.userId)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            status,
+            current_period_end: payload.isPro
+              ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+              : null, // 1 year period end
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", payload.userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("subscriptions").insert({
+          user_id: payload.userId,
+          status,
+          current_period_end: payload.isPro
+            ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+            : null,
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["admin-profiles"] });
+      toast.success("Plano do usuário atualizado!");
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Erro ao atualizar plano");
+    },
+  });
+
   return (
-    <AppShell title="Painel Administrativo" description="Aprovação e gerenciamento de acessos de novos usuários.">
+    <AppShell
+      title="Painel Administrativo"
+      description="Aprovação e gerenciamento de acessos de novos usuários."
+    >
       <Card className="border-border/60 bg-card/60">
         <CardHeader>
           <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -96,7 +147,9 @@ function AdminPage() {
               <Loader2 className="size-6 animate-spin text-primary" />
             </div>
           ) : users.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-12">Nenhum usuário cadastrado.</p>
+            <p className="text-xs text-muted-foreground text-center py-12">
+              Nenhum usuário cadastrado.
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -106,8 +159,10 @@ function AdminPage() {
                     <TableHead>E-mail</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead>Nível de Acesso</TableHead>
+                    <TableHead>Plano</TableHead>
                     <TableHead>Data de Cadastro</TableHead>
                     <TableHead className="text-right">Permissão de Busca</TableHead>
+                    <TableHead className="text-right">Acesso Pro Manual</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -119,6 +174,13 @@ function AdminPage() {
                     });
 
                     const isSelfAdmin = u.email === "brandfluxsm@gmail.com";
+
+                    // Subscription and trial calculations
+                    const sub = u.subscription;
+                    const isPro = sub?.status === "active" || u.email === "brandfluxsm@gmail.com";
+                    const trial = u.trial;
+                    const searchesUsed = trial?.searches_used ?? 0;
+                    const isTrialFinished = trial?.trial_finished || searchesUsed >= 1;
 
                     return (
                       <TableRow key={u.id} className="hover:bg-slate-900/40">
@@ -157,12 +219,29 @@ function AdminPage() {
                             </span>
                           )}
                         </TableCell>
+                        <TableCell>
+                          {isPro ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded px-1.5 py-0.5">
+                              ✨ Pro Ativo
+                            </span>
+                          ) : isTrialFinished ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-400 bg-amber-500/5 border border-amber-500/20 rounded px-1.5 py-0.5">
+                              🔒 Trial Expirado ({searchesUsed}/1)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-yellow-400 bg-yellow-500/5 border border-yellow-500/20 rounded px-1.5 py-0.5">
+                              🟡 Free Trial ({searchesUsed}/1)
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground tabular-nums">
                           {formattedDate}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
-                            <span className={`text-[10px] font-medium ${u.is_approved ? "text-emerald-400" : "text-rose-400"}`}>
+                            <span
+                              className={`text-[10px] font-medium ${u.is_approved ? "text-emerald-400" : "text-rose-400"}`}
+                            >
                               {u.is_approved ? "Autorizado" : "Bloqueado"}
                             </span>
                             <Switch
@@ -170,6 +249,22 @@ function AdminPage() {
                               disabled={isSelfAdmin || toggleApprovalMutation.isPending}
                               onCheckedChange={(checked) =>
                                 toggleApprovalMutation.mutate({ id: u.id, is_approved: checked })
+                              }
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <span
+                              className={`text-[10px] font-medium ${isPro ? "text-emerald-400" : "text-slate-400"}`}
+                            >
+                              {isPro ? "Pro Ativo" : "Inativo"}
+                            </span>
+                            <Switch
+                              checked={isPro}
+                              disabled={isSelfAdmin || toggleProMutation.isPending}
+                              onCheckedChange={(checked) =>
+                                toggleProMutation.mutate({ userId: u.id, isPro: checked })
                               }
                             />
                           </div>
